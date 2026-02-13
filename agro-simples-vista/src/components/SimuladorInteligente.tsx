@@ -1,8 +1,15 @@
 import { useState, useMemo } from "react";
 import SimuladorTributos from "@/components/SimuladorTributos";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select,
   SelectContent,
@@ -24,6 +31,8 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Calculator, Info, FileText } from "lucide-react";
+import { useFluxoCaixa } from "@/hooks/use-dashboard";
+import { LOGGED_PRODUCER_ID } from "@/mocks/producers";
 
 // --- Mock data ---
 interface DocMock {
@@ -39,14 +48,91 @@ interface DocMock {
 }
 
 const documentsMock: DocMock[] = [
-  { id: 1, titulo: "NF Venda Soja Lote 12", categoria: "Nota de venda", data: "2026-02-04", valor: 48000, classificacao: "PRODUTO", ncm: "12019000", uf: "PR", municipio: "Cascavel" },
-  { id: 2, titulo: "NF Compra Adubo Fosfatado", categoria: "Nota de compra", data: "2026-02-06", valor: 12300, classificacao: "PRODUTO", ncm: "31031900", uf: "PR", municipio: "Cascavel" },
-  { id: 3, titulo: "Consultoria Agronômica", categoria: "Serviço", data: "2026-02-08", valor: 4500, classificacao: "SERVICO", uf: "PR", municipio: "Cascavel" },
-  { id: 4, titulo: "Frete Grãos Cooperativa", categoria: "Frete", data: "2026-02-10", valor: 3200, classificacao: "SERVICO", uf: "PR", municipio: "Toledo" },
-  { id: 5, titulo: "NF Venda Milho Safrinha", categoria: "Nota de venda", data: "2026-02-15", valor: 31500, classificacao: "PRODUTO", ncm: "10059010", uf: "PR", municipio: "Cascavel" },
-  { id: 6, titulo: "Manutenção Maquinário", categoria: "Serviço", data: "2026-01-28", valor: 6800, classificacao: "SERVICO", uf: "PR", municipio: "Cascavel" },
-  { id: 7, titulo: "NF Compra Sementes", categoria: "Nota de compra", data: "2026-01-20", valor: 9800, classificacao: "PRODUTO", ncm: "12099100", uf: "PR", municipio: "Maringá" },
-  { id: 8, titulo: "NF Venda Trigo", categoria: "Nota de venda", data: "2026-02-12", valor: 22000, classificacao: "PRODUTO", ncm: "10019900", uf: "PR", municipio: "Cascavel" },
+  {
+    id: 1,
+    titulo: "NF Venda Soja Lote 12",
+    categoria: "Nota de venda",
+    data: "2026-02-04",
+    valor: 48000,
+    classificacao: "PRODUTO",
+    ncm: "12019000",
+    uf: "PR",
+    municipio: "Cascavel",
+  },
+  {
+    id: 2,
+    titulo: "NF Compra Adubo Fosfatado",
+    categoria: "Nota de compra",
+    data: "2026-02-06",
+    valor: 12300,
+    classificacao: "PRODUTO",
+    ncm: "31031900",
+    uf: "PR",
+    municipio: "Cascavel",
+  },
+  {
+    id: 3,
+    titulo: "Consultoria Agronômica",
+    categoria: "Serviço",
+    data: "2026-02-08",
+    valor: 4500,
+    classificacao: "SERVICO",
+    uf: "PR",
+    municipio: "Cascavel",
+  },
+  {
+    id: 4,
+    titulo: "Frete Grãos Cooperativa",
+    categoria: "Frete",
+    data: "2026-02-10",
+    valor: 3200,
+    classificacao: "SERVICO",
+    uf: "PR",
+    municipio: "Toledo",
+  },
+  {
+    id: 5,
+    titulo: "NF Venda Milho Safrinha",
+    categoria: "Nota de venda",
+    data: "2026-02-15",
+    valor: 31500,
+    classificacao: "PRODUTO",
+    ncm: "10059010",
+    uf: "PR",
+    municipio: "Cascavel",
+  },
+  {
+    id: 6,
+    titulo: "Manutenção Maquinário",
+    categoria: "Serviço",
+    data: "2026-01-28",
+    valor: 6800,
+    classificacao: "SERVICO",
+    uf: "PR",
+    municipio: "Cascavel",
+  },
+  {
+    id: 7,
+    titulo: "NF Compra Sementes",
+    categoria: "Nota de compra",
+    data: "2026-01-20",
+    valor: 9800,
+    classificacao: "PRODUTO",
+    ncm: "12099100",
+    uf: "PR",
+    municipio: "Maringá",
+  },
+  {
+    id: 8,
+    titulo: "NF Venda Trigo",
+    categoria: "Nota de venda",
+    data: "2026-02-12",
+    valor: 22000,
+    classificacao: "PRODUTO",
+    ncm: "10019900",
+    uf: "PR",
+    municipio: "Cascavel",
+  },
 ];
 
 const taxRates = {
@@ -67,10 +153,14 @@ function filterByPeriodo(docs: DocMock[], periodo: Periodo): DocMock[] {
       return docs.filter((d) => d.data === "2026-02-12");
     case "7dias":
       start.setDate(now.getDate() - 7);
-      return docs.filter((d) => new Date(d.data) >= start && new Date(d.data) <= now);
+      return docs.filter(
+        (d) => new Date(d.data) >= start && new Date(d.data) <= now,
+      );
     case "30dias":
       start.setDate(now.getDate() - 30);
-      return docs.filter((d) => new Date(d.data) >= start && new Date(d.data) <= now);
+      return docs.filter(
+        (d) => new Date(d.data) >= start && new Date(d.data) <= now,
+      );
     case "este_mes":
       return docs.filter((d) => d.data.startsWith("2026-02"));
     case "mes_anterior":
@@ -81,8 +171,10 @@ function filterByPeriodo(docs: DocMock[], periodo: Periodo): DocMock[] {
 }
 
 function filterByTipo(docs: DocMock[], tipo: Tipo): DocMock[] {
-  if (tipo === "produtos") return docs.filter((d) => d.classificacao === "PRODUTO");
-  if (tipo === "servicos") return docs.filter((d) => d.classificacao === "SERVICO");
+  if (tipo === "produtos")
+    return docs.filter((d) => d.classificacao === "PRODUTO");
+  if (tipo === "servicos")
+    return docs.filter((d) => d.classificacao === "SERVICO");
   return docs;
 }
 
@@ -91,7 +183,10 @@ function formatCurrency(value: number) {
 }
 
 function formatDate(iso: string) {
-  return new Date(iso + "T12:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
+  return new Date(iso + "T12:00:00").toLocaleDateString("pt-BR", {
+    day: "2-digit",
+    month: "short",
+  });
 }
 
 export default function SimuladorInteligente() {
@@ -100,18 +195,40 @@ export default function SimuladorInteligente() {
   const [detailOpen, setDetailOpen] = useState(false);
   const [simOpen, setSimOpen] = useState(false);
 
+  // Busca dados reais da API
+  const { data: fluxoCaixa, isLoading: loadingFluxo } =
+    useFluxoCaixa(LOGGED_PRODUCER_ID);
+
   const filtered = useMemo(() => {
     return filterByTipo(filterByPeriodo(documentsMock, periodo), tipo);
   }, [periodo, tipo]);
 
-  const base = useMemo(() => filtered.reduce((sum, d) => sum + d.valor, 0), [filtered]);
-  const cbs = base * taxRates.cbsRate;
-  const ibsState = base * taxRates.ibsStateRate;
-  const ibsCity = base * taxRates.ibsCityRate;
-  const totalTax = cbs + ibsState + ibsCity;
+  // Usa dados reais da API ou fallback para cálculo mock
+  const base =
+    fluxoCaixa?.saldo ?? filtered.reduce((sum, d) => sum + d.valor, 0);
+  const totalTax =
+    fluxoCaixa?.totalImpostos ??
+    base * (taxRates.cbsRate + taxRates.ibsStateRate + taxRates.ibsCityRate);
 
-  const prodCount = filtered.filter((d) => d.classificacao === "PRODUTO").length;
-  const servCount = filtered.filter((d) => d.classificacao === "SERVICO").length;
+  // Calcula proporções aproximadas (baseado nas alíquotas padrão)
+  const totalRate =
+    taxRates.cbsRate + taxRates.ibsStateRate + taxRates.ibsCityRate;
+  const cbs = fluxoCaixa
+    ? totalTax * (taxRates.cbsRate / totalRate)
+    : base * taxRates.cbsRate;
+  const ibsState = fluxoCaixa
+    ? totalTax * (taxRates.ibsStateRate / totalRate)
+    : base * taxRates.ibsStateRate;
+  const ibsCity = fluxoCaixa
+    ? totalTax * (taxRates.ibsCityRate / totalRate)
+    : base * taxRates.ibsCityRate;
+
+  const prodCount = filtered.filter(
+    (d) => d.classificacao === "PRODUTO",
+  ).length;
+  const servCount = filtered.filter(
+    (d) => d.classificacao === "SERVICO",
+  ).length;
   const comNcm = filtered.filter((d) => d.ncm).length;
   const semNcm = filtered.filter((d) => !d.ncm).length;
 
@@ -130,7 +247,10 @@ export default function SimuladorInteligente() {
         <CardContent className="space-y-5">
           {/* Filtros */}
           <div className="flex flex-wrap gap-3">
-            <Select value={periodo} onValueChange={(v) => setPeriodo(v as Periodo)}>
+            <Select
+              value={periodo}
+              onValueChange={(v) => setPeriodo(v as Periodo)}
+            >
               <SelectTrigger className="w-[160px]">
                 <SelectValue placeholder="Período" />
               </SelectTrigger>
@@ -161,22 +281,34 @@ export default function SimuladorInteligente() {
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Badge variant="secondary" className="gap-1 text-xs cursor-help">
+                    <Badge
+                      variant="secondary"
+                      className="gap-1 text-xs cursor-help"
+                    >
                       <Info size={12} />
-                      Estimativa automática
+                      {fluxoCaixa ? "Dados reais" : "Estimativa automática"}
                     </Badge>
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p>Valores obtidos a partir dos documentos anexados</p>
+                    <p>
+                      {fluxoCaixa
+                        ? "Valores calculados com base nas suas notas fiscais"
+                        : "Valores obtidos a partir dos documentos anexados"}
+                    </p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
             </div>
-            <p className="text-2xl font-heading font-bold text-primary">
-              {formatCurrency(totalTax)}
-            </p>
+            {loadingFluxo ? (
+              <Skeleton className="h-8 w-32" />
+            ) : (
+              <p className="text-2xl font-heading font-bold text-primary">
+                {formatCurrency(totalTax)}
+              </p>
+            )}
             <p className="text-xs text-muted-foreground">
-              Base de cálculo: {formatCurrency(base)}
+              Base de cálculo (lucro):{" "}
+              {loadingFluxo ? "..." : formatCurrency(base)}
             </p>
           </div>
 
@@ -184,29 +316,66 @@ export default function SimuladorInteligente() {
           <div className="space-y-2">
             {[
               { label: "CBS", rate: taxRates.cbsRate, value: cbs },
-              { label: "IBS Estadual", rate: taxRates.ibsStateRate, value: ibsState },
-              { label: "IBS Municipal", rate: taxRates.ibsCityRate, value: ibsCity },
+              {
+                label: "IBS Estadual",
+                rate: taxRates.ibsStateRate,
+                value: ibsState,
+              },
+              {
+                label: "IBS Municipal",
+                rate: taxRates.ibsCityRate,
+                value: ibsCity,
+              },
             ].map((t) => (
-              <div key={t.label} className="flex items-center justify-between text-sm py-1.5 px-3 rounded-md bg-muted/40">
+              <div
+                key={t.label}
+                className="flex items-center justify-between text-sm py-1.5 px-3 rounded-md bg-muted/40"
+              >
                 <span className="text-muted-foreground">{t.label}</span>
                 <div className="flex items-center gap-3">
-                  <span className="text-xs text-muted-foreground">{(t.rate * 100).toFixed(1)}%</span>
-                  <span className="font-semibold text-foreground w-28 text-right">{formatCurrency(t.value)}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {(t.rate * 100).toFixed(1)}%
+                  </span>
+                  {loadingFluxo ? (
+                    <Skeleton className="h-5 w-28" />
+                  ) : (
+                    <span className="font-semibold text-foreground w-28 text-right">
+                      {formatCurrency(t.value)}
+                    </span>
+                  )}
                 </div>
               </div>
             ))}
             <div className="flex items-center justify-between text-sm py-1.5 px-3 rounded-md bg-primary/10 font-semibold">
               <span className="text-foreground">Total</span>
               <div className="flex items-center gap-3">
-                <span className="text-xs text-muted-foreground">{((taxRates.cbsRate + taxRates.ibsStateRate + taxRates.ibsCityRate) * 100).toFixed(1)}%</span>
-                <span className="text-primary w-28 text-right">{formatCurrency(totalTax)}</span>
+                <span className="text-xs text-muted-foreground">
+                  {(
+                    (taxRates.cbsRate +
+                      taxRates.ibsStateRate +
+                      taxRates.ibsCityRate) *
+                    100
+                  ).toFixed(1)}
+                  %
+                </span>
+                {loadingFluxo ? (
+                  <Skeleton className="h-5 w-28" />
+                ) : (
+                  <span className="text-primary w-28 text-right">
+                    {formatCurrency(totalTax)}
+                  </span>
+                )}
               </div>
             </div>
           </div>
 
           {/* Detalhamento */}
           <div className="flex gap-2">
-            <Button variant="outline" className="flex-1" onClick={() => setDetailOpen(true)}>
+            <Button
+              variant="outline"
+              className="flex-1"
+              onClick={() => setDetailOpen(true)}
+            >
               <FileText size={16} className="mr-2" />
               Ver detalhamento
             </Button>
@@ -224,7 +393,8 @@ export default function SimuladorInteligente() {
           <DialogHeader>
             <DialogTitle>Documentos considerados no período</DialogTitle>
             <DialogDescription>
-              {filtered.length} documento{filtered.length !== 1 ? "s" : ""} encontrado{filtered.length !== 1 ? "s" : ""}
+              {filtered.length} documento{filtered.length !== 1 ? "s" : ""}{" "}
+              encontrado{filtered.length !== 1 ? "s" : ""}
             </DialogDescription>
           </DialogHeader>
 
@@ -241,13 +411,19 @@ export default function SimuladorInteligente() {
             {filtered.map((doc) => (
               <li key={doc.id} className="py-3 first:pt-0 last:pb-0 space-y-1">
                 <div className="flex items-center justify-between">
-                  <p className="text-sm font-medium text-foreground">{doc.titulo}</p>
-                  <span className="text-sm font-semibold text-foreground">{formatCurrency(doc.valor)}</span>
+                  <p className="text-sm font-medium text-foreground">
+                    {doc.titulo}
+                  </p>
+                  <span className="text-sm font-semibold text-foreground">
+                    {formatCurrency(doc.valor)}
+                  </span>
                 </div>
                 <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
                   <span>{doc.categoria}</span>
                   <span>•</span>
-                  <span>{doc.classificacao === "PRODUTO" ? "Produto" : "Serviço"}</span>
+                  <span>
+                    {doc.classificacao === "PRODUTO" ? "Produto" : "Serviço"}
+                  </span>
                   <span>•</span>
                   <span>{doc.ncm ? `NCM ${doc.ncm}` : "Serviço"}</span>
                   <span>•</span>

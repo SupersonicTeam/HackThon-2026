@@ -125,15 +125,23 @@ export default function Dashboard() {
     : mockResumo;
 
   const documentos =
-    notas?.slice(0, 7).map((nota, idx) => ({
-      id: idx + 1,
-      nome: nota.naturezaOperacao || `NF ${nota.numero}`,
-      tipo: nota.tipo === "entrada" ? "Nota de Entrada" : "Nota de Saída",
-      data:
-        nota.dataEmissao?.split("T")[0] ||
-        new Date().toISOString().split("T")[0],
-      status: nota.status,
-    })) || ultimosDocumentos;
+    notas
+      ?.sort((a, b) => {
+        // Ordena do mais recente para o mais antigo
+        const dateA = new Date(a.dataEmissao || "1970-01-01").getTime();
+        const dateB = new Date(b.dataEmissao || "1970-01-01").getTime();
+        return dateB - dateA; // Retorna negativo se B é anterior, positivo se B é posterior
+      })
+      .slice(0, 7)
+      .map((nota, idx) => ({
+        id: idx + 1,
+        nome: nota.naturezaOperacao || `NF ${nota.numero}`,
+        tipo: nota.tipo === "entrada" ? "Nota de Entrada" : "Nota de Saída",
+        data:
+          nota.dataEmissao?.split("T")[0] ||
+          new Date().toISOString().split("T")[0],
+        status: nota.status,
+      })) || ultimosDocumentos;
 
   const nomeUsuario = produtor?.nome || usuario.nome;
 
@@ -226,14 +234,22 @@ export default function Dashboard() {
                   : `${(((fluxoCaixa?.totalImpostos ?? 6850) / (resumoFinanceiro.entradas || 1)) * 100).toFixed(1)}%`}
               </span>
             </div>
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted/80 text-sm">
-              <Briefcase size={14} className="text-primary" />
-              <span className="text-muted-foreground">Previsão salarial:</span>
-              <span className="font-semibold text-foreground">
-                {formatCurrency(previsaoSalarial)}
-              </span>
-            </div>
           </div>
+
+          {/* Explicação do imposto */}
+          {!loadingFluxo && fluxoCaixa && (
+            <div className="pt-3 border-t border-border">
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                <span className="font-medium text-foreground">💡 De onde vem o imposto previsto?</span>
+                <br />
+                Este valor é a soma de todos os impostos cobrados nas suas notas (compras e vendas): 
+                <span className="font-medium"> CBS, IBS, FUNRURAL, ICMS e IPI</span>. 
+                No agronegócio, você tem <span className="font-medium text-primary">60% de redução</span> nas 
+                alíquotas de CBS (8,8% → 3,5%) e IBS (17,7% → 7,1%), totalizando cerca de{" "}
+                <span className="font-medium text-primary">10,6%</span> ao invés dos 26,5% do regime comum.
+              </p>
+            </div>
+          )}
         </CardContent>
       </Card>
 
