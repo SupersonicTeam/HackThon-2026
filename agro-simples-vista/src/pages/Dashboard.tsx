@@ -103,18 +103,24 @@ export default function Dashboard() {
   >(null);
 
   // Integração com API (com fallback para mocks)
-  const { data: fluxoCaixa, isLoading: loadingFluxo } =
-    useFluxoCaixa(LOGGED_PRODUCER_ID);
+  const {
+    data: fluxoCaixa,
+    isLoading: loadingFluxo,
+    error: errorFluxo,
+  } = useFluxoCaixa(LOGGED_PRODUCER_ID);
   const { data: notas, isLoading: loadingNotas } = useNotas(LOGGED_PRODUCER_ID);
   const { data: produtor } = useProdutor(LOGGED_PRODUCER_ID);
+
+  // Debug: log API response
+  console.log("FluxoCaixa API:", { fluxoCaixa, loadingFluxo, errorFluxo });
 
   // Usa dados da API ou fallback para mocks
   const resumoFinanceiro = fluxoCaixa
     ? {
-        entradas: fluxoCaixa.entradas.total,
-        saidas: fluxoCaixa.saidas.total,
-        lucro: fluxoCaixa.saldo,
-        impostos: fluxoCaixa.impostos.total,
+        entradas: fluxoCaixa.totalEntradas ?? 0,
+        saidas: fluxoCaixa.totalSaidas ?? 0,
+        lucro: fluxoCaixa.saldo ?? 0,
+        impostos: fluxoCaixa.totalImpostos ?? 0,
       }
     : mockResumo;
 
@@ -123,7 +129,9 @@ export default function Dashboard() {
       id: idx + 1,
       nome: nota.naturezaOperacao || `NF ${nota.numero}`,
       tipo: nota.tipo === "entrada" ? "Nota de Entrada" : "Nota de Saída",
-      data: nota.dataEmissao.split("T")[0],
+      data:
+        nota.dataEmissao?.split("T")[0] ||
+        new Date().toISOString().split("T")[0],
       status: nota.status,
     })) || ultimosDocumentos;
 
@@ -206,7 +214,7 @@ export default function Dashboard() {
               <span className="font-semibold text-foreground">
                 {loadingFluxo
                   ? "..."
-                  : formatCurrency(fluxoCaixa?.impostos.total || 6850)}
+                  : formatCurrency(fluxoCaixa?.totalImpostos ?? 6850)}
               </span>
             </div>
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 text-sm">
@@ -215,7 +223,7 @@ export default function Dashboard() {
               <span className="font-semibold text-primary">
                 {loadingFluxo
                   ? "..."
-                  : `${(((fluxoCaixa?.impostos.total || 6850) / (resumoFinanceiro.entradas || 1)) * 100).toFixed(1)}%`}
+                  : `${(((fluxoCaixa?.totalImpostos ?? 6850) / (resumoFinanceiro.entradas || 1)) * 100).toFixed(1)}%`}
               </span>
             </div>
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted/80 text-sm">

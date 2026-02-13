@@ -6,7 +6,13 @@ export interface SolicitacaoContador {
   categoria: string;
   mesReferencia: string;
   prioridade: "alta" | "media" | "baixa";
-  status: "pendente" | "enviado" | "recebido" | "rejeitado" | "concluido" | "cancelado";
+  status:
+    | "pendente"
+    | "enviado"
+    | "recebido"
+    | "rejeitado"
+    | "concluido"
+    | "cancelado";
   prazo: string;
   observacao?: string;
   motivoRejeicao?: string;
@@ -17,7 +23,7 @@ export interface SolicitacaoContador {
 export const solicitacoesContador: SolicitacaoContador[] = [
   {
     id: 1,
-    producerId: "p1",
+    producerId: "c4f29a8c-1559-4e6c-b0fd-05ce55753c4f",
     titulo: "Notas de venda - Fevereiro",
     descricaoCurta: "Envie todas as notas de venda do mês",
     categoria: "Nota de venda",
@@ -28,7 +34,7 @@ export const solicitacoesContador: SolicitacaoContador[] = [
   },
   {
     id: 2,
-    producerId: "p1",
+    producerId: "c4f29a8c-1559-4e6c-b0fd-05ce55753c4f",
     titulo: "Comprovantes de frete",
     descricaoCurta: "Recibos de frete de grãos e insumos",
     categoria: "Frete",
@@ -39,7 +45,7 @@ export const solicitacoesContador: SolicitacaoContador[] = [
   },
   {
     id: 3,
-    producerId: "p1",
+    producerId: "c4f29a8c-1559-4e6c-b0fd-05ce55753c4f",
     titulo: "Folha de pagamento - Janeiro",
     descricaoCurta: "Holerites e comprovantes de pagamento",
     categoria: "Salário",
@@ -50,7 +56,7 @@ export const solicitacoesContador: SolicitacaoContador[] = [
   },
   {
     id: 4,
-    producerId: "p2",
+    producerId: "c4f29a8c-1559-4e6c-b0fd-05ce55753c4f",
     titulo: "Notas de compra de insumos",
     descricaoCurta: "NFs de adubo, sementes e defensivos",
     categoria: "Nota de compra",
@@ -61,7 +67,7 @@ export const solicitacoesContador: SolicitacaoContador[] = [
   },
   {
     id: 5,
-    producerId: "p2",
+    producerId: "c4f29a8c-1559-4e6c-b0fd-05ce55753c4f",
     titulo: "Extrato bancário - Fevereiro",
     descricaoCurta: "Extrato completo da conta rural",
     categoria: "Banco",
@@ -72,7 +78,7 @@ export const solicitacoesContador: SolicitacaoContador[] = [
   },
   {
     id: 6,
-    producerId: "p3",
+    producerId: "c4f29a8c-1559-4e6c-b0fd-05ce55753c4f",
     titulo: "Contrato de arrendamento",
     descricaoCurta: "Renovação do contrato do Talhão Sul",
     categoria: "Contrato",
@@ -83,7 +89,7 @@ export const solicitacoesContador: SolicitacaoContador[] = [
   },
   {
     id: 7,
-    producerId: "p1",
+    producerId: "c4f29a8c-1559-4e6c-b0fd-05ce55753c4f",
     titulo: "Notas de venda – Janeiro",
     descricaoCurta: "Notas fiscais de venda de soja e milho",
     categoria: "Nota de venda",
@@ -95,7 +101,7 @@ export const solicitacoesContador: SolicitacaoContador[] = [
   },
   {
     id: 8,
-    producerId: "p1",
+    producerId: "c4f29a8c-1559-4e6c-b0fd-05ce55753c4f",
     titulo: "Comprovantes de frete – Fevereiro",
     descricaoCurta: "Recibos de frete de grãos para cooperativa",
     categoria: "Frete",
@@ -107,7 +113,7 @@ export const solicitacoesContador: SolicitacaoContador[] = [
   },
   {
     id: 9,
-    producerId: "p1",
+    producerId: "c4f29a8c-1559-4e6c-b0fd-05ce55753c4f",
     titulo: "Folha de pagamento – Janeiro",
     descricaoCurta: "Holerites e encargos trabalhistas",
     categoria: "Salário",

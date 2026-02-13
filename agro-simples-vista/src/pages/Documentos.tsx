@@ -172,7 +172,9 @@ export default function Documentos() {
 
   // Combine API rascunhos with local drafts
   const drafts = useMemo(() => {
-    const localDrafts = allDrafts.filter((d) => d.producerId === "p1");
+    const localDrafts = allDrafts.filter(
+      (d) => d.producerId === LOGGED_PRODUCER_ID,
+    );
     if (rascunhosApi && rascunhosApi.length > 0) {
       // Map API rascunhos to the local format
       const apiDrafts: RascunhoNFe[] = rascunhosApi.map((r) => ({
@@ -797,11 +799,19 @@ export default function Documentos() {
         open={draftOpen}
         onOpenChange={setDraftOpen}
         onSave={(draft) => {
-          addDraft({ ...draft, producerId: "p1", status: "rascunho" });
+          addDraft({
+            ...draft,
+            producerId: LOGGED_PRODUCER_ID,
+            status: "rascunho",
+          });
           toast.success("Rascunho salvo");
         }}
         onSend={(draft) => {
-          addDraft({ ...draft, producerId: "p1", status: "enviado_contador" });
+          addDraft({
+            ...draft,
+            producerId: LOGGED_PRODUCER_ID,
+            status: "enviado_contador",
+          });
           toast.success("Rascunho enviado ao contador");
         }}
       />

@@ -60,31 +60,19 @@ export interface NotaFiscal {
   valorFunrural?: number;
   valorIcms?: number;
   observacoes?: string;
-  dataEmissao: string;
-  createdAt: string;
+  dataEmissao?: string;
+  createdAt?: string;
   itens: ItemNotaFiscal[];
 }
 
 export interface FluxoCaixa {
-  periodo: {
-    inicio: string;
-    fim: string;
-  };
-  entradas: {
-    total: number;
-    quantidade: number;
-  };
-  saidas: {
-    total: number;
-    quantidade: number;
-  };
+  totalEntradas: number;
+  totalSaidas: number;
   saldo: number;
-  impostos: {
-    cbs: number;
-    ibs: number;
-    funrural: number;
-    total: number;
-  };
+  totalImpostos: number;
+  lucroEstimado: number;
+  qtdNotasEntrada: number;
+  qtdNotasSaida: number;
 }
 
 export interface ImpostosPorTipo {

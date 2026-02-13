@@ -160,7 +160,7 @@ export default function Calendario() {
         titulo: v.evento,
         tipo: v.descricao?.split(" - ")[0] || "Obrigação",
         valor: v.valor || 0,
-        data: v.dataVencimento.split("T")[0],
+        data: v.dataVencimento?.split("T")[0] || "",
         status: v.status === "pago" ? ("pago" as const) : ("a_pagar" as const),
       }));
     }

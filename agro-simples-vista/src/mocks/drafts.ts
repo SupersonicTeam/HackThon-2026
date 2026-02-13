@@ -55,7 +55,7 @@ export const statusStyles: Record<DraftStatus, string> = {
 export const initialDrafts: RascunhoNFe[] = [
   {
     id: 1001,
-    producerId: "p1",
+    producerId: "c4f29a8c-1559-4e6c-b0fd-05ce55753c4f",
     titulo: "Rascunho NF-e — Venda Soja",
     tipo: "Saída",
     uf: "MT",
@@ -75,7 +75,7 @@ export const initialDrafts: RascunhoNFe[] = [
   },
   {
     id: 1002,
-    producerId: "p1",
+    producerId: "c4f29a8c-1559-4e6c-b0fd-05ce55753c4f",
     titulo: "Rascunho NF-e — Compra Adubo",
     tipo: "Entrada",
     uf: "PR",
@@ -95,7 +95,7 @@ export const initialDrafts: RascunhoNFe[] = [
   },
   {
     id: 1003,
-    producerId: "p1",
+    producerId: "c4f29a8c-1559-4e6c-b0fd-05ce55753c4f",
     titulo: "Rascunho NF-e — Venda Milho",
     tipo: "Saída",
     uf: "MT",
@@ -117,7 +117,7 @@ export const initialDrafts: RascunhoNFe[] = [
   },
   {
     id: 1004,
-    producerId: "p1",
+    producerId: "c4f29a8c-1559-4e6c-b0fd-05ce55753c4f",
     titulo: "Rascunho NF-e — Venda Algodão",
     tipo: "Saída",
     uf: "MT",
@@ -137,7 +137,7 @@ export const initialDrafts: RascunhoNFe[] = [
   },
   {
     id: 1005,
-    producerId: "p2",
+    producerId: "c4f29a8c-1559-4e6c-b0fd-05ce55753c4f",
     titulo: "Rascunho NF-e — Venda Café",
     tipo: "Saída",
     uf: "MG",
