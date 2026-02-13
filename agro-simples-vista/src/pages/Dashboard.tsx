@@ -278,7 +278,7 @@ export default function Dashboard() {
               <span className="font-semibold text-primary">
                 {loadingFluxo
                   ? "..."
-                  : `${(((fluxoCaixa?.totalImpostos ?? 6850) / (resumoFinanceiro.entradas || 1)) * 100).toFixed(1)}%`}
+                  : `${(((fluxoCaixa?.totalImpostos ?? 6850) / ((resumoFinanceiro.entradas || 1) + (fluxoCaixa?.totalImpostos ?? 6850))) * 100).toFixed(1)}%`}
               </span>
             </div>
           </div>

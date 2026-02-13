@@ -1133,19 +1133,38 @@ export default function Documentos() {
 
               <div className="space-y-1.5">
                 <Label>Arquivo</Label>
-                <label className="flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-muted-foreground/30 py-8 cursor-pointer hover:border-primary/50 transition-colors">
-                  <Upload size={28} className="text-muted-foreground" />
-                  <span className="text-sm text-muted-foreground">
-                    {novoArquivo || "Arraste ou clique para enviar"}
-                  </span>
-                  <input
-                    type="file"
-                    className="hidden"
-                    onChange={(e) =>
-                      setNovoArquivo(e.target.files?.[0]?.name || null)
-                    }
-                  />
-                </label>
+                <div className="space-y-2">
+                  {/* Botão de tirar foto - apenas mobile */}
+                  <label className="sm:hidden flex items-center justify-center gap-2 rounded-lg border-2 border-dashed border-primary/50 bg-primary/5 py-4 cursor-pointer hover:bg-primary/10 transition-colors">
+                    <FileImage size={24} className="text-primary" />
+                    <span className="text-sm font-medium text-primary">
+                      Tirar Foto
+                    </span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      capture="environment"
+                      className="hidden"
+                      onChange={(e) =>
+                        setNovoArquivo(e.target.files?.[0]?.name || null)
+                      }
+                    />
+                  </label>
+                  {/* Upload normal */}
+                  <label className="flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-muted-foreground/30 py-6 sm:py-8 cursor-pointer hover:border-primary/50 transition-colors">
+                    <Upload size={28} className="text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground text-center px-2">
+                      {novoArquivo || "Clique para enviar arquivo"}
+                    </span>
+                    <input
+                      type="file"
+                      className="hidden"
+                      onChange={(e) =>
+                        setNovoArquivo(e.target.files?.[0]?.name || null)
+                      }
+                    />
+                  </label>
+                </div>
               </div>
             </div>
           )}
