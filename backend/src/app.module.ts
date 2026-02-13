@@ -4,6 +4,7 @@ import { ChatModule } from './modules/chat/chat.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { CalendarioFiscalModule } from './modules/calendario-fiscal/calendario-fiscal.module';
 import { PrismaModule } from './prisma/prisma.module';
+import { WhatsappModule } from './modules/whatsapp/whatsapp.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { PrismaModule } from './prisma/prisma.module';
     ChatModule,
     DashboardModule,
     CalendarioFiscalModule,
+    WhatsappModule,
   ],
 })
 export class AppModule {}
