@@ -15,25 +15,34 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Camera, Image as ImageIcon, Sparkles, X } from "lucide-react";
-import { useSolicitacoes } from "@/contexts/SolicitacoesContext";
+import { useContador } from "@/hooks/use-contador";
 import { LOGGED_PRODUCER_ID } from "@/mocks/producers";
+import { toast } from "sonner";
 
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  preSelectedRequestId?: number;
+  preSelectedRequestId?: number | string;
 }
 
 export default function AnexarDocumentoDialog({ open, onOpenChange, preSelectedRequestId }: Props) {
-  const { solicitacoes, enviarDocumento } = useSolicitacoes();
+  const { pendencias, anexarDocumento, listar } = useContador();
   const [selectedRequestId, setSelectedRequestId] = useState<string>("");
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const [isMobile, setIsMobile] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   const isPreSelected = preSelectedRequestId != null;
+
+  // Load pendências on mount
+  useEffect(() => {
+    if (open) {
+      listar(LOGGED_PRODUCER_ID).catch(() => {});
+    }
+  }, [open, listar]);
 
   useEffect(() => {
     if (open && preSelectedRequestId != null) {
@@ -49,8 +58,8 @@ export default function AnexarDocumentoDialog({ open, onOpenChange, preSelectedR
     return () => mql.removeEventListener("change", onChange);
   }, []);
 
-  const pendentes = solicitacoes.filter((s) => s.status === "pendente" && s.producerId === LOGGED_PRODUCER_ID);
-  const selected = solicitacoes.find((s) => String(s.id) === selectedRequestId);
+  const pendentes = pendencias.filter((p) => p.status === "pendente" && p.produtorId === LOGGED_PRODUCER_ID);
+  const selected = pendencias.find((p) => String(p.id) === selectedRequestId);
 
   function handleFile(f: File | null) {
     setFile(f);
@@ -68,12 +77,37 @@ export default function AnexarDocumentoDialog({ open, onOpenChange, preSelectedR
     setPreview(null);
   }
 
-  function handleSave() {
-    if (selectedRequestId && file) {
-      enviarDocumento(Number(selectedRequestId), file.name);
+  async function handleSave() {
+    if (!selectedRequestId || !file) return;
+
+    setSaving(true);
+    try {
+      // Determinar tipo do documento a partir dos tiposDocumentos da pendência
+      let tipoDocumento = "documento-geral";
+      try {
+        const tipos = JSON.parse(selected?.tiposDocumentos || "[]");
+        if (Array.isArray(tipos) && tipos.length > 0) {
+          tipoDocumento = tipos[0];
+        }
+      } catch {
+        // Fallback
+      }
+
+      await anexarDocumento({
+        pendenciaId: selectedRequestId,
+        nomeArquivo: file.name,
+        tipoDocumento,
+        tamanho: file.size,
+      });
+
+      toast.success("Documento anexado com sucesso!");
+      reset();
+      onOpenChange(false);
+    } catch (error: any) {
+      toast.error(error?.message || "Erro ao anexar documento");
+    } finally {
+      setSaving(false);
     }
-    reset();
-    onOpenChange(false);
   }
 
   return (
@@ -99,8 +133,7 @@ export default function AnexarDocumentoDialog({ open, onOpenChange, preSelectedR
               <div className="rounded-lg border bg-muted/40 p-3">
                 <p className="text-sm font-medium">{selected.titulo}</p>
                 <div className="flex items-center gap-1.5 mt-1">
-                  <Badge variant="outline" className="text-[10px] px-1.5 py-0">{selected.categoria}</Badge>
-                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{selected.mesReferencia}</Badge>
+                  <Badge variant="outline" className="text-[10px] px-1.5 py-0">{selected.prioridade}</Badge>
                 </div>
               </div>
             ) : pendentes.length === 0 ? (
@@ -115,7 +148,7 @@ export default function AnexarDocumentoDialog({ open, onOpenChange, preSelectedR
                     <SelectItem key={s.id} value={String(s.id)}>
                       <span className="flex items-center gap-2">
                         {s.titulo}
-                        {s.prioridade === "alta" && (
+                        {(s.prioridade === "alta" || s.prioridade === "urgente") && (
                           <Badge variant="destructive" className="text-[10px] px-1.5 py-0">
                             Urgente
                           </Badge>
@@ -132,20 +165,16 @@ export default function AnexarDocumentoDialog({ open, onOpenChange, preSelectedR
           {!isPreSelected && selected && (
             <div className="rounded-lg border bg-muted/40 p-3 space-y-1.5 text-sm">
               <p>
-                <span className="text-muted-foreground">Categoria:</span>{" "}
-                <span className="font-medium">{selected.categoria}</span>
+                <span className="text-muted-foreground">Prioridade:</span>{" "}
+                <span className="font-medium">{selected.prioridade}</span>
               </p>
-              <p>
-                <span className="text-muted-foreground">Mês referência:</span>{" "}
-                <span className="font-medium">{selected.mesReferencia}</span>
-              </p>
-              <p className="text-muted-foreground text-xs">{selected.descricaoCurta}</p>
+              <p className="text-muted-foreground text-xs">{selected.descricao}</p>
             </div>
           )}
 
           {/* Pre-selected description */}
-          {isPreSelected && selected && selected.descricaoCurta && (
-            <p className="text-xs text-muted-foreground">{selected.descricaoCurta}</p>
+          {isPreSelected && selected && selected.descricao && (
+            <p className="text-xs text-muted-foreground">{selected.descricao}</p>
           )}
 
           {/* Upload buttons */}
@@ -215,8 +244,8 @@ export default function AnexarDocumentoDialog({ open, onOpenChange, preSelectedR
             </div>
           )}
 
-          <Button className="w-full" size="lg" onClick={handleSave} disabled={!selectedRequestId || !file}>
-            Salvar
+          <Button className="w-full" size="lg" onClick={handleSave} disabled={!selectedRequestId || !file || saving}>
+            {saving ? "Salvando..." : "Salvar"}
           </Button>
         </div>
       </DialogContent>

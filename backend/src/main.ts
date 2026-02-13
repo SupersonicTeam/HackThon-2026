@@ -6,6 +6,9 @@ import { AppModule } from './app.module';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  // Set global prefix
+  app.setGlobalPrefix('api');
+
   // Enable CORS - allow all origins in development
   app.enableCors({
     origin: true, // Allow all origins

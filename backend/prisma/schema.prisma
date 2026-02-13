@@ -14,31 +14,32 @@ datasource db {
 // PRODUTOR - Dados do produtor rural
 // ==========================================
 model Produtor {
-  id        String   @id @default(uuid())
-  nome      String
-  cpfCnpj   String   @unique
-  email     String?
-  telefone  String?
-  estado    String?
-  cidade    String?
-  
+  id       String  @id @default(uuid())
+  nome     String
+  cpfCnpj  String  @unique
+  email    String?
+  telefone String?
+  estado   String?
+  cidade   String?
+
   // Dados tributários
-  regime    String   // MEI, Simples, Lucro Presumido, Lucro Real
-  culturas  String   // JSON array de culturas (Soja, Milho, etc)
-  
+  regime   String // MEI, Simples, Lucro Presumido, Lucro Real
+  culturas String // JSON array de culturas (Soja, Milho, etc)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  
+
   // Relacionamentos
-  notas     NotaFiscal[]
-  impostos  ImpostoCalculado[]
-  rascunhos RascunhoNota[]
-  eventosFiscais EventoFiscal[]
+  notas               NotaFiscal[]
+  impostos            ImpostoCalculado[]
+  rascunhos           RascunhoNota[]
+  eventosFiscais      EventoFiscal[]
   notificacoesFiscais NotificacaoFiscal[]
-  relatoriosMensais RelatorioMensal[]
-  pendenciasContador PendenciaContador[]
-  pacotesDocumentos PacoteDocumentos[]
-  
+  relatoriosMensais   RelatorioMensal[]
+  pendenciasContador  PendenciaContador[]
+  pacotesDocumentos   PacoteDocumentos[]
+  agendaItens         AgendaItem[]
+
   @@map("produtores")
 }
 
@@ -46,149 +47,150 @@ model Produtor {
 // NOTA FISCAL - Upload e dados de notas
 // ==========================================
 model NotaFiscal {
-  id              String   @id @default(uuid())
-  produtorId      String
-  
+  id         String @id @default(uuid())
+  produtorId String
+
   // Identificação da nota
-  chaveAcesso     String   @unique // 44 dígitos - chave de acesso da NF-e
-  tipo            String   // "entrada" ou "saida"
-  numero          String?
-  serie           String?
-  
+  chaveAcesso String  @unique // 44 dígitos - chave de acesso da NF-e
+  tipo        String // "entrada" ou "saida"
+  numero      String?
+  serie       String?
+
   // Dados fiscais
-  cfop            String?  // Código Fiscal de Operação
+  cfop             String? // Código Fiscal de Operação
   naturezaOperacao String? // Ex: "Venda de mercadoria"
-  
+
   // Destinatário/Remetente
   nomeEmitente    String?
   cpfCnpjEmitente String?
-  destino         String?  // estado de destino
-  exportacao      Boolean  @default(false)
-  
+  destino         String? // estado de destino
+  exportacao      Boolean @default(false)
+
   // Valores totais da nota
-  valorTotal      Float
-  valorProdutos   Float?   // Subtotal dos produtos
-  valorFrete      Float?
-  valorSeguro     Float?
-  valorDesconto   Float?
-  valorOutros     Float?
-  
+  valorTotal    Float
+  valorProdutos Float? // Subtotal dos produtos
+  valorFrete    Float?
+  valorSeguro   Float?
+  valorDesconto Float?
+  valorOutros   Float?
+
   // Impostos totais
-  valorCbs        Float?
-  valorIbs        Float?
-  valorFunrural   Float?
-  valorIcms       Float?
-  valorIpi        Float?
-  
+  valorCbs      Float?
+  valorIbs      Float?
+  valorFunrural Float?
+  valorIcms     Float?
+  valorIpi      Float?
+
   // Arquivo
-  arquivoUrl      String?  // URL do arquivo (foto ou PDF)
-  arquivoTipo     String?  // "foto" ou "pdf"
-  
+  arquivoUrl  String? // URL do arquivo (foto ou PDF)
+  arquivoTipo String? // "foto" ou "pdf"
+
   // Status
-  status          String   @default("pendente") // pendente, validada, erro
-  observacoes     String?
-  
-  dataEmissao     DateTime
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
+  status      String  @default("pendente") // pendente, validada, erro
+  observacoes String?
+
+  dataEmissao DateTime
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
   // Relacionamentos
-  produtor        Produtor @relation(fields: [produtorId], references: [id], onDelete: Cascade)
-  itens           ItemNotaFiscal[]
-  rascunhos       RascunhoNota[]  
-  @@map("notas_fiscais")
+  produtor  Produtor         @relation(fields: [produtorId], references: [id], onDelete: Cascade)
+  itens     ItemNotaFiscal[]
+  rascunhos RascunhoNota[]
+
   @@index([produtorId])
   @@index([tipo])
   @@index([dataEmissao])
   @@index([chaveAcesso])
+  @@map("notas_fiscais")
 }
 
 // ==========================================
 // ITEM NOTA FISCAL - Produtos/serviços da nota
 // ==========================================
 model ItemNotaFiscal {
-  id              String  @id @default(uuid())
-  notaFiscalId    String
-  
+  id           String @id @default(uuid())
+  notaFiscalId String
+
   // Identificação do item
-  numeroItem      Int
-  codigoProduto   String?
-  descricao       String
-  ncm             String?  // Nomenclatura Comum do Mercosul
-  cfop            String?  // CFOP do item
-  
+  numeroItem    Int
+  codigoProduto String?
+  descricao     String
+  ncm           String? // Nomenclatura Comum do Mercosul
+  cfop          String? // CFOP do item
+
   // Quantidades e valores
-  unidade         String?  // kg, ton, sc, L, etc
-  quantidade      Float
-  valorUnitario   Float
-  valorTotal      Float
-  valorDesconto   Float?
-  valorFrete      Float?
-  
+  unidade       String? // kg, ton, sc, L, etc
+  quantidade    Float
+  valorUnitario Float
+  valorTotal    Float
+  valorDesconto Float?
+  valorFrete    Float?
+
   // Impostos do item
   baseCalculoIcms Float?
   valorIcms       Float?
   aliquotaIcms    Float?
-  
-  baseCalculoIpi  Float?
-  valorIpi        Float?
-  aliquotaIpi     Float?
-  
-  valorCbs        Float?
-  valorIbs        Float?
-  valorFunrural   Float?
-  
+
+  baseCalculoIpi Float?
+  valorIpi       Float?
+  aliquotaIpi    Float?
+
+  valorCbs      Float?
+  valorIbs      Float?
+  valorFunrural Float?
+
   // Informações adicionais
-  informacoes     String?
-  
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
+  informacoes String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   // Relacionamento
-  notaFiscal      NotaFiscal @relation(fields: [notaFiscalId], references: [id], onDelete: Cascade)
-  
-  @@map("itens_nota_fiscal")
+  notaFiscal NotaFiscal @relation(fields: [notaFiscalId], references: [id], onDelete: Cascade)
+
   @@index([notaFiscalId])
   @@index([numeroItem])
+  @@map("itens_nota_fiscal")
 }
 
 // ==========================================
 // IMPOSTO CALCULADO - Histórico de cálculos
 // ==========================================
 model ImpostoCalculado {
-  id            String   @id @default(uuid())
-  produtorId    String
-  
+  id         String @id @default(uuid())
+  produtorId String
+
   // Período
-  mesReferencia Int      // 1-12
-  anoReferencia Int      // 2026
-  
+  mesReferencia Int // 1-12
+  anoReferencia Int // 2026
+
   // Valores calculados
-  faturamento   Float
-  custos        Float?
-  lucro         Float?
-  
+  faturamento Float
+  custos      Float?
+  lucro       Float?
+
   // Impostos
-  cbs           Float
-  ibs           Float
-  funrural      Float
+  cbs            Float
+  ibs            Float
+  funrural       Float
   outrosImpostos Float?
-  totalImpostos Float
-  
+  totalImpostos  Float
+
   // Regime usado
-  regime        String
-  
+  regime String
+
   // Detalhes
-  detalhes      String?  // JSON com breakdown detalhado
-  
-  createdAt     DateTime @default(now())
-  
+  detalhes String? // JSON com breakdown detalhado
+
+  createdAt DateTime @default(now())
+
   // Relacionamento
-  produtor      Produtor @relation(fields: [produtorId], references: [id], onDelete: Cascade)
-  
-  @@map("impostos_calculados")
+  produtor Produtor @relation(fields: [produtorId], references: [id], onDelete: Cascade)
+
   @@index([produtorId])
   @@index([anoReferencia, mesReferencia])
+  @@map("impostos_calculados")
 }
 
 // ==========================================
@@ -203,15 +205,15 @@ model ImpostoCalculado {
 
 // Rascunho de Nota Fiscal
 model RascunhoNota {
-  id                   String   @id @default(cuid())
-  
+  id String @id @default(cuid())
+
   // Relacionamentos
-  produtorId          String
-  produtor            Produtor @relation(fields: [produtorId], references: [id])
-  contadorId          String?
-  
+  produtorId String
+  produtor   Produtor @relation(fields: [produtorId], references: [id])
+  contadorId String?
+
   // Dados da Nota
-  tipo                String   // 'entrada' | 'saida'
+  tipo                String // 'entrada' | 'saida'
   cfop                String?
   naturezaOperacao    String?
   nomeDestinatario    String
@@ -220,69 +222,69 @@ model RascunhoNota {
   dataEmissao         DateTime
   valorTotal          Float    @default(0)
   observacoes         String?
-  
+
   // Controle de Workflow
-  status              String   @default("draft") // draft, enviado, revisao, aprovado, reprovado, finalizado
-  chaveTemporaria     String   @unique
-  
+  status          String @default("draft") // draft, enviado, revisao, aprovado, reprovado, finalizado
+  chaveTemporaria String @unique
+
   // Feedback do Contador
-  feedbackContador    String?
-  correcoesSugeridas  String?
-  dadosCorrigidos     String? // JSON com correções
-  
+  feedbackContador   String?
+  correcoesSugeridas String?
+  dadosCorrigidos    String? // JSON com correções
+
   // Relacionamento com Nota Final
-  notaFinalId         String?
-  notaFinal          NotaFiscal? @relation(fields: [notaFinalId], references: [id])
-  
+  notaFinalId String?
+  notaFinal   NotaFiscal? @relation(fields: [notaFinalId], references: [id])
+
   // Timestamps
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
-  dataEnvio          DateTime?
-  dataFeedback       DateTime?
-  dataFinalizacao    DateTime?
-  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  dataEnvio       DateTime?
+  dataFeedback    DateTime?
+  dataFinalizacao DateTime?
+
   // Itens do Rascunho
-  itens              ItemRascunhoNota[]
-  
+  itens ItemRascunhoNota[]
+
   @@map("rascunhos_nota")
 }
 
 // Item do Rascunho de Nota Fiscal
 model ItemRascunhoNota {
-  id                String  @id @default(cuid())
-  
+  id String @id @default(cuid())
+
   // Relacionamento com Rascunho
-  rascunhoNotaId    String
-  rascunhoNota      RascunhoNota @relation(fields: [rascunhoNotaId], references: [id], onDelete: Cascade)
-  
+  rascunhoNotaId String
+  rascunhoNota   RascunhoNota @relation(fields: [rascunhoNotaId], references: [id], onDelete: Cascade)
+
   // Dados do Item
-  numeroItem        Int
-  codigoProduto     String?
-  descricao         String
-  ncm               String?
-  cfop              String?
-  unidade           String?
-  quantidade        Float
-  valorUnitario     Float
-  valorTotal        Float
-  valorDesconto     Float?
-  valorFrete        Float?
-  
+  numeroItem    Int
+  codigoProduto String?
+  descricao     String
+  ncm           String?
+  cfop          String?
+  unidade       String?
+  quantidade    Float
+  valorUnitario Float
+  valorTotal    Float
+  valorDesconto Float?
+  valorFrete    Float?
+
   // Impostos do Item
-  baseCalculoIcms   Float?
-  valorIcms         Float?
-  aliquotaIcms      Float?
-  baseCalculoIpi    Float?
-  valorIpi          Float?
-  aliquotaIpi       Float?
-  valorCbs          Float?
-  valorIbs          Float?
-  valorFunrural     Float?
-  
-  informacoes       String?
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-  
+  baseCalculoIcms Float?
+  valorIcms       Float?
+  aliquotaIcms    Float?
+  baseCalculoIpi  Float?
+  valorIpi        Float?
+  aliquotaIpi     Float?
+  valorCbs        Float?
+  valorIbs        Float?
+  valorFunrural   Float?
+
+  informacoes String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
   @@map("itens_rascunho_nota")
 }
 
@@ -292,201 +294,220 @@ model ItemRascunhoNota {
 
 // Evento Fiscal
 model EventoFiscal {
-  id               String   @id @default(cuid())
-  produtorId       String
-  
+  id         String @id @default(cuid())
+  produtorId String
+
   // Dados do Evento
-  nome             String
-  descricao        String
-  tipo             String   // 'mensal' | 'trimestral' | 'semestral' | 'anual' | 'unico'
-  diaVencimento    Int      // Dia do mês (1-31)
-  mesVencimento    Int?     // Mês específico para eventos anuais (1-12)
-  
+  nome          String
+  descricao     String
+  tipo          String // 'mensal' | 'trimestral' | 'semestral' | 'anual' | 'unico'
+  diaVencimento Int // Dia do mês (1-31)
+  mesVencimento Int? // Mês específico para eventos anuais (1-12)
+
   // Controle
-  ativo            Boolean  @default(true)
-  obrigatorio      Boolean  @default(false)
-  regime           String   // JSON array de regimes que se aplicam
-  valor            Float?
-  observacoes      String?
-  
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-  
+  ativo       Boolean @default(true)
+  obrigatorio Boolean @default(false)
+  regime      String // JSON array de regimes que se aplicam
+  valor       Float?
+  observacoes String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   // Relacionamentos
-  produtor         Produtor @relation(fields: [produtorId], references: [id], onDelete: Cascade)
-  notificacoes     NotificacaoFiscal[]
-  
-  @@map("eventos_fiscais")
+  produtor     Produtor            @relation(fields: [produtorId], references: [id], onDelete: Cascade)
+  notificacoes NotificacaoFiscal[]
+
   @@index([produtorId])
   @@index([tipo])
   @@index([diaVencimento])
+  @@map("eventos_fiscais")
 }
 
 // Notificação Fiscal
 model NotificacaoFiscal {
-  id               String   @id @default(cuid())
-  produtorId       String
-  eventoFiscalId   String
-  
+  id             String @id @default(cuid())
+  produtorId     String
+  eventoFiscalId String
+
   // Dados da Notificação
   dataVencimento   DateTime
   diasAntecedencia Int
   dataNotificacao  DateTime
-  
+
   // Status e Envio
-  enviado          Boolean  @default(false)
-  dataEnvio        DateTime?
-  tipo             String   // 'email' | 'whatsapp' | 'sistema'
-  mensagem         String
-  
+  enviado   Boolean   @default(false)
+  dataEnvio DateTime?
+  tipo      String // 'email' | 'whatsapp' | 'sistema'
+  mensagem  String
+
   // Controle de tentativas
-  tentativasEnvio  Int      @default(0)
-  ultimaTentativa  DateTime?
-  erro             String?
-  
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-  
+  tentativasEnvio Int       @default(0)
+  ultimaTentativa DateTime?
+  erro            String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   // Relacionamentos
-  produtor         Produtor @relation(fields: [produtorId], references: [id], onDelete: Cascade)
-  eventoFiscal     EventoFiscal @relation(fields: [eventoFiscalId], references: [id], onDelete: Cascade)
-  
-  @@map("notificacoes_fiscais")
+  produtor     Produtor     @relation(fields: [produtorId], references: [id], onDelete: Cascade)
+  eventoFiscal EventoFiscal @relation(fields: [eventoFiscalId], references: [id], onDelete: Cascade)
+
   @@index([produtorId])
   @@index([dataVencimento])
   @@index([enviado])
+  @@map("notificacoes_fiscais")
+}
+
+model AgendaItem {
+  id          String  @id @default(cuid())
+  produtorId  String
+  pendenciaId String? @unique
+
+  titulo    String
+  descricao String?
+  data      DateTime
+  status    String   @default("aberto") // aberto | concluido | cancelado
+  tipo      String   @default("pendencia-contador") // pra filtrar na UI
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  produtor  Produtor           @relation(fields: [produtorId], references: [id], onDelete: Cascade)
+  pendencia PendenciaContador? @relation(fields: [pendenciaId], references: [id], onDelete: Cascade)
+
+  @@index([produtorId])
+  @@index([data])
+  @@index([status])
+  @@map("agenda_itens")
 }
 
 // Relatório Mensal
 model RelatorioMensal {
-  id               String   @id @default(cuid())
-  produtorId       String
-  
+  id         String @id @default(cuid())
+  produtorId String
+
   // Período
-  mes              Int      // 1-12
-  ano              Int      // 2026
-  
+  mes Int // 1-12
+  ano Int // 2026
+
   // Dados do Relatório
-  dataGeracao      DateTime @default(now())
-  linkDownload     String
-  nomeArquivo      String
-  tamanho          Int?     // Tamanho em bytes
-  
+  dataGeracao  DateTime @default(now())
+  linkDownload String
+  nomeArquivo  String
+  tamanho      Int? // Tamanho em bytes
+
   // Envio para contador
-  contadorEmail    String?
-  enviado          Boolean  @default(false)
-  dataEnvio        DateTime?
-  
+  contadorEmail String?
+  enviado       Boolean   @default(false)
+  dataEnvio     DateTime?
+
   // Configuração automática
-  envioAutomatico  Boolean  @default(false)
-  diaEnvio         Int?     // Dia do mês para envio
-  incluirAnexos    String?  // JSON array dos anexos
-  
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-  
+  envioAutomatico Boolean @default(false)
+  diaEnvio        Int? // Dia do mês para envio
+  incluirAnexos   String? // JSON array dos anexos
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   // Relacionamento
-  produtor         Produtor @relation(fields: [produtorId], references: [id], onDelete: Cascade)
-  
-  @@map("relatorios_mensais")
+  produtor Produtor @relation(fields: [produtorId], references: [id], onDelete: Cascade)
+
+  @@unique([produtorId, mes, ano])
   @@index([produtorId])
   @@index([mes, ano])
-  @@unique([produtorId, mes, ano])
+  @@map("relatorios_mensais")
 }
 
 // Pendência do Contador
 model PendenciaContador {
-  id               String   @id @default(cuid())
-  produtorId       String
-  contadorId       String?
-  
-  // Dados da Pendência
-  titulo           String
-  descricao        String
-  dataLimite       DateTime
-  dataCriacao      DateTime @default(now())
-  dataAtendimento  DateTime?
-  
-  // Status e Prioridade
-  status           String   @default("pendente") // 'pendente' | 'em-andamento' | 'concluida' | 'vencida'
-  prioridade       String   // 'baixa' | 'media' | 'alta' | 'urgente'
-  
-  // Documentos Solicitados
-  tiposDocumentos  String   // JSON array: ['folha-pagamento', 'nf-entrada', 'nf-saida']
-  observacoes      String?
+  id         String  @id @default(cuid())
+  produtorId String
+  contadorId String?
+
+  titulo          String
+  descricao       String
+  dataLimite      DateTime
+  dataCriacao     DateTime  @default(now())
+  dataAtendimento DateTime?
+
+  status     String @default("pendente")
+  prioridade String
+
+  tiposDocumentos    String
+  observacoes        String?
   observacoesProduto String?
-  
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-  
-  // Relacionamentos
-  produtor         Produtor @relation(fields: [produtorId], references: [id], onDelete: Cascade)
-  documentos       DocumentoAnexado[]
-  pacotes          PacoteDocumentos[]
-  
+
+  // 🔥 ADICIONE ISSO AQUI
+  motivoCancelamento String?
+  motivoRejeicao     String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  produtor   Produtor           @relation(fields: [produtorId], references: [id], onDelete: Cascade)
+  documentos DocumentoAnexado[]
+  pacotes    PacoteDocumentos[]
+  AgendaItem AgendaItem?
+
   @@map("pendencias_contador")
-  @@index([produtorId])
-  @@index([status])
-  @@index([dataLimite])
-  @@index([prioridade])
 }
 
 // Documento Anexado
 model DocumentoAnexado {
-  id               String   @id @default(cuid())
-  pendenciaId      String
-  
+  id          String @id @default(cuid())
+  pendenciaId String
+
   // Dados do Documento
-  nomeArquivo      String
-  tipoDocumento    String   // 'folha-pagamento', 'nf-entrada', 'nf-saida', etc
-  tamanho          Int      // Tamanho em bytes
-  caminhoArquivo   String
-  checksum         String?  // Hash do arquivo para verificação
-  
-  dataUpload       DateTime @default(now())
-  
+  nomeArquivo    String
+  tipoDocumento  String // 'folha-pagamento', 'nf-entrada', 'nf-saida', etc
+  tamanho        Int // Tamanho em bytes
+  caminhoArquivo String
+  checksum       String? // Hash do arquivo para verificação
+
+  dataUpload DateTime @default(now())
+
   // Relacionamento
-  pendencia        PendenciaContador @relation(fields: [pendenciaId], references: [id], onDelete: Cascade)
-  
-  @@map("documentos_anexados")
+  pendencia PendenciaContador @relation(fields: [pendenciaId], references: [id], onDelete: Cascade)
+
   @@index([pendenciaId])
   @@index([tipoDocumento])
+  @@map("documentos_anexados")
 }
 
 // Pacote de Documentos
 model PacoteDocumentos {
-  id               String   @id @default(cuid())
-  pendenciaId      String
-  produtorId       String
-  
+  id          String @id @default(cuid())
+  pendenciaId String
+  produtorId  String
+
   // Dados do Pacote
-  nomePacote       String
-  nomeArquivoZip   String
-  linkDownload     String
-  senha            String?
-  tamanho          Int      // Tamanho em bytes
+  nomePacote         String
+  nomeArquivoZip     String
+  linkDownload       String
+  senha              String?
+  tamanho            Int // Tamanho em bytes
   quantidadeArquivos Int
-  
+
   // Controle de Acesso
-  dataGeracao      DateTime @default(now())
-  dataExpiracao    DateTime // 7 dias após geração
-  downloads        Int      @default(0)
-  ultimoDownload   DateTime?
-  
+  dataGeracao    DateTime  @default(now())
+  dataExpiracao  DateTime // 7 dias após geração
+  downloads      Int       @default(0)
+  ultimoDownload DateTime?
+
   // Notificação
-  contadorNotificado Boolean @default(false)
-  dataNotificacao  DateTime?
-  
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-  
+  contadorNotificado Boolean   @default(false)
+  dataNotificacao    DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   // Relacionamentos
-  pendencia        PendenciaContador @relation(fields: [pendenciaId], references: [id], onDelete: Cascade)
-  produtor         Produtor @relation(fields: [produtorId], references: [id], onDelete: Cascade)
-  
-  @@map("pacotes_documentos")
+  pendencia PendenciaContador @relation(fields: [pendenciaId], references: [id], onDelete: Cascade)
+  produtor  Produtor          @relation(fields: [produtorId], references: [id], onDelete: Cascade)
+
   @@index([produtorId])
   @@index([pendenciaId])
   @@index([dataExpiracao])
+  @@map("pacotes_documentos")
 }
-

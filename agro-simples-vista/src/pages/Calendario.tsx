@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -12,12 +12,11 @@ import {
   CreditCard,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { ultimosDocumentos } from "@/mocks";
-import { useSolicitacoes } from "@/contexts/SolicitacoesContext";
 import { LOGGED_PRODUCER_ID } from "@/mocks/producers";
 import AnexarDocumentoDialog from "@/components/AnexarDocumentoDialog";
 import { useVencimentos } from "@/hooks/use-calendario";
 import { useNotas } from "@/hooks/use-dashboard";
+import { useContador } from "@/hooks/use-contador";
 
 const WEEKDAYS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 const MONTH_NAMES = [
@@ -33,56 +32,6 @@ const MONTH_NAMES = [
   "Outubro",
   "Novembro",
   "Dezembro",
-];
-
-// Mock documentos com data de anexação (fallback)
-const documentosMockFallback = ultimosDocumentos.map((d) => ({
-  ...d,
-  dataAnexacao: d.data,
-}));
-
-// Mock pagamentos (fallback)
-const pagamentosMockFallback = [
-  {
-    id: "pg1",
-    titulo: "FUNRURAL",
-    tipo: "Imposto",
-    valor: 1250,
-    data: "2026-02-20",
-    status: "a_pagar" as const,
-  },
-  {
-    id: "pg2",
-    titulo: "Energia Elétrica",
-    tipo: "Taxa",
-    valor: 890,
-    data: "2026-02-25",
-    status: "a_pagar" as const,
-  },
-  {
-    id: "pg3",
-    titulo: "Parcela Financiamento",
-    tipo: "Contribuição",
-    valor: 4500,
-    data: "2026-02-15",
-    status: "pago" as const,
-  },
-  {
-    id: "pg4",
-    titulo: "Seguro Safra",
-    tipo: "Contribuição",
-    valor: 2100,
-    data: "2026-02-10",
-    status: "pago" as const,
-  },
-  {
-    id: "pg5",
-    titulo: "ITR Parcela 2",
-    tipo: "Imposto",
-    valor: 3200,
-    data: "2026-02-05",
-    status: "pago" as const,
-  },
 ];
 
 function toDateKey(d: Date) {
@@ -125,17 +74,22 @@ export default function Calendario() {
   const [selectedDay, setSelectedDay] = useState<number>(today.getDate());
   const [attachDialogOpen, setAttachDialogOpen] = useState(false);
   const [attachPreSelectedId, setAttachPreSelectedId] = useState<
-    number | undefined
+    number | string | undefined
   >(undefined);
-  const { solicitacoes } = useSolicitacoes();
 
   // API Integration
+  const { pendencias, loading: loadingPendencias, listar } = useContador();
   const { data: vencimentosApi, isLoading: loadingVencimentos } =
     useVencimentos(LOGGED_PRODUCER_ID, 90);
   const { data: notasApi, isLoading: loadingNotas } =
     useNotas(LOGGED_PRODUCER_ID);
 
-  // Documents: use API or fallback to mock
+  // Load pendências on mount
+  useEffect(() => {
+    listar(LOGGED_PRODUCER_ID).catch(() => {});
+  }, [listar]);
+
+  // Documents: use API data only
   const documentosMock = useMemo(() => {
     if (notasApi && notasApi.length > 0) {
       return notasApi.map((nota) => ({
@@ -149,10 +103,10 @@ export default function Calendario() {
           "",
       }));
     }
-    return documentosMockFallback;
+    return [];
   }, [notasApi]);
 
-  // Payments: use API or fallback to mock
+  // Payments: use API data only
   const pagamentosMock = useMemo(() => {
     if (vencimentosApi && vencimentosApi.length > 0) {
       return vencimentosApi.map((v, index) => ({
@@ -164,7 +118,7 @@ export default function Calendario() {
         status: v.status === "pago" ? ("pago" as const) : ("a_pagar" as const),
       }));
     }
-    return pagamentosMockFallback;
+    return [];
   }, [vencimentosApi]);
 
   const days = getCalendarDays(viewYear, viewMonth);
@@ -179,9 +133,43 @@ export default function Calendario() {
   }
 
   function getSolicitacoesForDate(dateKey: string) {
-    return solicitacoes.filter(
-      (s) => s.producerId === LOGGED_PRODUCER_ID && s.prazo === dateKey,
-    );
+    // Mapear pendências do backend para formato de solicitações
+    return pendencias
+      .filter((p) => p.produtorId === LOGGED_PRODUCER_ID && p.dataLimite?.slice(0, 10) === dateKey)
+      .map((p) => {
+        const status =
+          p.status === "concluida"
+            ? "concluido"
+            : p.status === "cancelada"
+            ? "cancelado"
+            : "pendente";
+        
+        // Parse tiposDocumentos com fallback
+        let categoria = "Documento";
+        try {
+          const tipos = JSON.parse(p.tiposDocumentos || "[]");
+          if (Array.isArray(tipos) && tipos.length > 0) {
+            categoria = tipos[0];
+          }
+        } catch {
+          // Fallback para string vazia
+        }
+        
+        return {
+          id: p.id,
+          producerId: p.produtorId,
+          titulo: p.titulo,
+          descricaoCurta: p.descricao || p.titulo,
+          categoria,
+          mesReferencia: "",
+          prioridade: p.prioridade as "alta" | "media" | "baixa",
+          status: status as "pendente" | "enviado" | "recebido" | "rejeitado" | "concluido" | "cancelado",
+          prazo: p.dataLimite?.slice(0, 10) || "",
+          observacao: p.observacoes ?? undefined,
+          motivoRejeicao: p.motivoRejeicao ?? undefined,
+          motivoCancelamento: p.motivoCancelamento ?? undefined,
+        };
+      });
   }
 
   const goPrev = () => {

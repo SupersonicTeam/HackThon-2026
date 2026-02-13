@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -41,9 +41,9 @@ import {
   Eye,
 } from "lucide-react";
 import { useSolicitacoes } from "@/contexts/SolicitacoesContext";
+import { useContador } from "@/hooks/use-contador";
 import { mesesReferencia, tiposDocumento } from "@/mocks";
 import { produtores } from "@/mocks/producers";
-import type { SolicitacaoContador } from "@/mocks/requests";
 import DocsOficiaisTab from "@/components/DocsOficiaisTab";
 import ResumoPagamento from "@/components/ResumoPagamento";
 import ConferirDadosDialog from "@/components/ConferirDadosDialog";
@@ -54,6 +54,7 @@ function formatDate(iso: string) {
 }
 
 const prioridadeBadge = (p: string) => {
+  if (p === "urgente") return <Badge variant="destructive" className="text-[10px]">Urgente</Badge>;
   if (p === "alta") return <Badge variant="destructive" className="text-[10px]">Alta</Badge>;
   if (p === "media") return <Badge variant="secondary" className="text-[10px]">Média</Badge>;
   return <Badge variant="outline" className="text-[10px]">Baixa</Badge>;
@@ -68,8 +69,46 @@ const statusBadge = (s: string) => {
   return <Badge variant="destructive" className="text-[10px]"><XCircle size={10} className="mr-1" />Rejeitado</Badge>;
 };
 
+type SolicitacaoUi = {
+  id: string;
+  producerId: string;
+  titulo: string;
+  descricaoCurta: string;
+  categoria: string;
+  mesReferencia: string;
+  prioridade: "alta" | "media" | "baixa" | "urgente";
+  status: "pendente" | "concluido" | "cancelado" | "enviado" | "recebido" | "rejeitado";
+  prazo: string;
+  observacao?: string;
+  motivoRejeicao?: string;
+  motivoCancelamento?: string;
+  arquivoNome?: string;
+};
+
+function parseTiposDocumentos(raw?: string): string[] {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.map((v) => String(v)) : [];
+  } catch {
+    return [];
+  }
+}
+
+function decodeCategoriaMes(raw?: string) {
+  const tipos = parseTiposDocumentos(raw);
+  const mesToken = tipos.find((t) => t.startsWith("mes:")) || "";
+  const mesReferencia = mesToken.replace("mes:", "").trim();
+  const categoria = tipos.find((t) => t !== mesToken) || "Documento";
+  return { categoria, mesReferencia };
+}
+
+function buildTiposDocumentos(categoria: string, mesReferencia: string) {
+  return [categoria, mesReferencia ? `mes:${mesReferencia}` : ""].filter(Boolean);
+}
+
 // Sort: pendente first, then by closest deadline
-function sortSolicitacoes(a: SolicitacaoContador, b: SolicitacaoContador) {
+function sortSolicitacoes(a: SolicitacaoUi, b: SolicitacaoUi) {
   const statusOrder: Record<string, number> = { pendente: 0, enviado: 1, concluido: 2, cancelado: 3, recebido: 2, rejeitado: 3 };
   const sa = statusOrder[a.status] ?? 4;
   const sb = statusOrder[b.status] ?? 4;
@@ -78,18 +117,30 @@ function sortSolicitacoes(a: SolicitacaoContador, b: SolicitacaoContador) {
 }
 
 export default function Contador() {
-  const { solicitacoes, envios, drafts, addSolicitacao, editarSolicitacao, marcarRecebido, rejeitarEnvio, marcarConcluido, cancelarSolicitacao, reabrirSolicitacao, updateDraft } = useSolicitacoes();
+  const { drafts, updateDraft } = useSolicitacoes();
+  const {
+    pendencias,
+    loading,
+    error,
+    listar,
+    criar,
+    atualizar,
+    concluir,
+    cancelar,
+    reabrir,
+    rejeitar,
+  } = useContador();
   const [selectedProducerId, setSelectedProducerId] = useState(produtores[0].id);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [rejectId, setRejectId] = useState<number | null>(null);
+  const [rejectId, setRejectId] = useState<string | null>(null);
   const [rejectMotivo, setRejectMotivo] = useState("");
-  const [cancelId, setCancelId] = useState<number | null>(null);
+  const [cancelId, setCancelId] = useState<string | null>(null);
   const [cancelMotivo, setCancelMotivo] = useState("");
-  const [editingSolicitacao, setEditingSolicitacao] = useState<SolicitacaoContador | null>(null);
-  const [viewEnvioId, setViewEnvioId] = useState<number | null>(null);
-  const [viewDocId, setViewDocId] = useState<number | null>(null);
-  const [conferirId, setConferirId] = useState<number | null>(null);
-  const [resumoSolId, setResumoSolId] = useState<number | null>(null);
+  const [editingSolicitacao, setEditingSolicitacao] = useState<SolicitacaoUi | null>(null);
+  const [viewEnvioId, setViewEnvioId] = useState<string | null>(null);
+  const [viewDocId, setViewDocId] = useState<string | null>(null);
+  const [conferirId, setConferirId] = useState<string | null>(null);
+  const [resumoSolId, setResumoSolId] = useState<string | null>(null);
 
 
   // form state
@@ -101,11 +152,38 @@ export default function Contador() {
   const [formDescricao, setFormDescricao] = useState("");
 
   const selectedProducer = produtores.find((p) => p.id === selectedProducerId);
+  const solicitacoes = useMemo<SolicitacaoUi[]>(() => {
+    return pendencias.map((p) => {
+      const { categoria, mesReferencia } = decodeCategoriaMes(p.tiposDocumentos);
+      const status =
+        p.status === "concluida"
+          ? "concluido"
+          : p.status === "cancelada"
+          ? "cancelado"
+          : "pendente";
+      return {
+        id: p.id,
+        producerId: p.produtorId,
+        titulo: p.titulo,
+        descricaoCurta: p.descricao || p.titulo,
+        categoria,
+        mesReferencia,
+        prioridade: p.prioridade,
+        status,
+        prazo: p.dataLimite?.slice(0, 10) || "",
+        observacao: p.observacoes ?? undefined,
+        motivoRejeicao: p.motivoRejeicao ?? undefined,
+        motivoCancelamento: p.motivoCancelamento ?? undefined,
+      };
+    });
+  }, [pendencias]);
+
   const filtered = solicitacoes.filter((s) => s.producerId === selectedProducerId).sort(sortSolicitacoes);
-  const enviados = solicitacoes.filter((s) => s.producerId === selectedProducerId && (s.status === "enviado" || s.status === "recebido"));
+  const enviados = solicitacoes.filter((s) => s.producerId === selectedProducerId && s.status === "enviado").sort(sortSolicitacoes);
   const concluidos = solicitacoes.filter((s) => s.producerId === selectedProducerId && s.status === "concluido");
   const filteredDrafts = drafts.filter((d) => d.producerId === selectedProducerId);
-  const openEdit = (s: SolicitacaoContador) => {
+
+  const openEdit = (s: SolicitacaoUi) => {
     setEditingSolicitacao(s);
     setFormTitulo(s.titulo);
     setFormCategoria(s.categoria);
@@ -127,45 +205,60 @@ export default function Contador() {
     setDialogOpen(false);
   };
 
-  const salvar = () => {
+  const salvar = async () => {
     if (!formTitulo || !formCategoria || !formMes || !formPrioridade || !formPrazo) return;
-    if (editingSolicitacao) {
-      editarSolicitacao(editingSolicitacao.id, {
-        titulo: formTitulo,
-        descricaoCurta: formDescricao || formTitulo,
-        categoria: formCategoria,
-        mesReferencia: formMes,
-        prioridade: formPrioridade as "alta" | "media" | "baixa",
-        prazo: formPrazo,
-        observacao: formDescricao || undefined,
-      });
-    } else {
-      addSolicitacao({
-        producerId: selectedProducerId,
-        titulo: formTitulo,
-        descricaoCurta: formDescricao || formTitulo,
-        categoria: formCategoria,
-        mesReferencia: formMes,
-        prioridade: formPrioridade as "alta" | "media" | "baixa",
-        prazo: formPrazo,
-      });
+    const tiposDocumentos = buildTiposDocumentos(formCategoria, formMes);
+    const payload = {
+      titulo: formTitulo,
+      descricao: formDescricao || formTitulo,
+      dataLimite: formPrazo,
+      prioridade: formPrioridade as "alta" | "media" | "baixa" | "urgente",
+      tiposDocumentos,
+      observacoes: formDescricao || undefined,
+    };
+    try {
+      if (editingSolicitacao) {
+        await atualizar(editingSolicitacao.id, payload);
+        toast.success("Solicitação atualizada");
+      } else {
+        await criar({ ...payload, produtorId: selectedProducerId });
+        toast.success("Solicitação criada");
+      }
+      resetForm();
+    } catch (e) {
+      toast.error("Falha ao salvar a solicitação");
     }
-    resetForm();
   };
 
-  const handleReject = () => {
+  const handleReject = async () => {
     if (rejectId === null || !rejectMotivo.trim()) return;
-    rejeitarEnvio(rejectId, rejectMotivo);
-    setRejectId(null);
-    setRejectMotivo("");
+    try {
+      await rejeitar(rejectId, rejectMotivo);
+      setRejectId(null);
+      setRejectMotivo("");
+      toast.success("Solicitação rejeitada");
+    } catch (e) {
+      toast.error("Falha ao rejeitar a solicitação");
+    }
   };
 
-  const handleCancel = () => {
+  const handleCancel = async () => {
     if (cancelId === null || !cancelMotivo.trim()) return;
-    cancelarSolicitacao(cancelId, cancelMotivo);
-    setCancelId(null);
-    setCancelMotivo("");
+    try {
+      await cancelar(cancelId, cancelMotivo);
+      setCancelId(null);
+      setCancelMotivo("");
+      toast.success("Solicitação cancelada");
+    } catch (e) {
+      toast.error("Falha ao cancelar a solicitação");
+    }
   };
+
+  useEffect(() => {
+    listar(selectedProducerId).catch(() => {
+      toast.error("Falha ao carregar solicitações");
+    });
+  }, [listar, selectedProducerId]);
 
   return (
     <div className="space-y-4 md:space-y-6 max-w-3xl mx-auto">
@@ -326,7 +419,15 @@ export default function Contador() {
             </Dialog>
           </div>
 
-          {filtered.length === 0 ? (
+          {loading ? (
+            <Card className="shadow-sm">
+              <CardContent className="py-8 text-center text-sm text-muted-foreground">Carregando solicitações...</CardContent>
+            </Card>
+          ) : error ? (
+            <Card className="shadow-sm">
+              <CardContent className="py-8 text-center text-sm text-destructive">Erro ao carregar solicitações.</CardContent>
+            </Card>
+          ) : filtered.length === 0 ? (
             <Card className="shadow-sm">
               <CardContent className="py-8 text-center text-sm text-muted-foreground">Nenhuma solicitação para este produtor.</CardContent>
             </Card>
@@ -377,23 +478,16 @@ export default function Contador() {
                         </Button>
                       </div>
                     )}
-                      {s.status === "enviado" && (
-                        <div className="flex flex-col sm:flex-row gap-2">
-                          <Button size="sm" variant="outline" className="flex-1 w-full" onClick={() => setViewEnvioId(s.id)}>
-                            <Eye size={14} className="mr-1" /> Ver envio
-                          </Button>
-                        </div>
-                    )}
                     {s.status === "cancelado" && (
                       <div className="flex gap-2">
-                        <Button size="sm" variant="outline" className="flex-1" onClick={() => reabrirSolicitacao(s.id)}>
+                        <Button size="sm" variant="outline" className="flex-1" onClick={() => reabrir(s.id)}>
                           <RotateCcw size={14} className="mr-1" /> Reabrir
                         </Button>
                       </div>
                     )}
                     {s.status === "concluido" && (
                       <div className="flex gap-2">
-                        <Button size="sm" variant="outline" className="flex-1" onClick={() => reabrirSolicitacao(s.id)}>
+                        <Button size="sm" variant="outline" className="flex-1" onClick={() => reabrir(s.id)}>
                           <RotateCcw size={14} className="mr-1" /> Reabrir
                         </Button>
                       </div>
@@ -428,12 +522,10 @@ export default function Contador() {
               </DialogHeader>
               {(() => {
                 const sol = solicitacoes.find((s) => s.id === viewEnvioId);
-                const envio = envios.find((e) => e.solicitacaoId === viewEnvioId);
                 return (
                   <div className="space-y-3 pt-2 text-sm">
                     <div><span className="text-muted-foreground">Solicitação:</span> <span className="font-medium">{sol?.titulo}</span></div>
                     {sol?.arquivoNome && <div className="flex items-center gap-1"><FileText size={14} /> <span>{sol.arquivoNome}</span></div>}
-                    {envio && <div><span className="text-muted-foreground">Data do envio:</span> {formatDate(envio.dataEnvio)}</div>}
                     <p className="text-xs text-muted-foreground">Valide este documento na aba "Recebidos".</p>
                   </div>
                 );
@@ -451,7 +543,6 @@ export default function Contador() {
           ) : (
             <div className="space-y-2">
               {enviados.map((s) => {
-                const envio = envios.find((e) => e.solicitacaoId === s.id);
                 return (
                   <Card key={s.id} className="shadow-sm">
                     <CardContent className="py-3 px-4 space-y-2">
@@ -459,14 +550,8 @@ export default function Contador() {
                         <div className="flex-1 min-w-0 space-y-1">
                           <p className="text-sm font-medium truncate">{s.titulo}</p>
                           <p className="text-xs text-muted-foreground">
-                            {s.categoria} · {s.mesReferencia}
-                            {envio && <> · Enviado em {formatDate(envio.dataEnvio)}</>}
+                            Prioridade: {s.prioridade}
                           </p>
-                          {s.arquivoNome && (
-                            <p className="text-xs text-muted-foreground flex items-center gap-1">
-                              <FileText size={12} /> {s.arquivoNome}
-                            </p>
-                          )}
                         </div>
                         <div className="shrink-0">{statusBadge(s.status)}</div>
                       </div>
@@ -502,20 +587,12 @@ export default function Contador() {
               </DialogHeader>
               {(() => {
                 const sol = solicitacoes.find((s) => s.id === viewDocId);
-                const envio = envios.find((e) => e.solicitacaoId === viewDocId);
                 return (
                   <div className="space-y-3 pt-2 text-sm">
                     <div><span className="text-muted-foreground">Solicitação:</span> <span className="font-medium">{sol?.titulo}</span></div>
-                    <div><span className="text-muted-foreground">Categoria:</span> {sol?.categoria}</div>
-                    <div><span className="text-muted-foreground">Mês referência:</span> {sol?.mesReferencia}</div>
-                    {sol?.arquivoNome && (
-                      <div className="flex items-center gap-2 p-3 rounded-md bg-muted">
-                        <FileText size={20} className="text-muted-foreground" />
-                        <div>
-                          <p className="font-medium text-sm">{sol.arquivoNome}</p>
-                          {envio && <p className="text-xs text-muted-foreground">Enviado em {formatDate(envio.dataEnvio)}</p>}
-                        </div>
-                      </div>
+                    <div><span className="text-muted-foreground">Prioridade:</span> {sol?.prioridade}</div>
+                    {sol?.observacao && (
+                      <div className="text-xs text-muted-foreground">{sol.observacao}</div>
                     )}
                     <p className="text-xs text-muted-foreground">Preview do arquivo indisponível no MVP.</p>
                   </div>
@@ -547,11 +624,14 @@ export default function Contador() {
             open={conferirId !== null}
             onOpenChange={(v) => { if (!v) setConferirId(null); }}
             onSave={(id, formData) => {
-              editarSolicitacao(id, { observacao: formData.observacao, categoria: formData.tipo });
+              atualizar(String(id), {
+                tiposDocumentos: buildTiposDocumentos(formData.tipo, ""),
+                observacoes: formData.observacao,
+              });
               toast.success("Dados salvos com sucesso");
             }}
             onApprove={(id) => {
-              marcarConcluido(id);
+              concluir(String(id));
               setConferirId(null);
               toast.success("Documento aprovado e concluído");
             }}
@@ -569,10 +649,10 @@ export default function Contador() {
         {/* === TAB CONCLUÍDOS === */}
         <TabsContent value="concluidos" className="space-y-4 mt-4">
           {(() => {
-            const metaConcluidos: Record<number, { valor: number; imposto: number; dataConclusao: string }> = {
-              7: { valor: 120000, imposto: 10800, dataConclusao: "2026-02-10" },
-              8: { valor: 35000, imposto: 3150, dataConclusao: "2026-02-18" },
-              9: { valor: 8500, imposto: 2200, dataConclusao: "2026-02-05" },
+            const metaConcluidos: Record<string, { valor: number; imposto: number; dataConclusao: string }> = {
+              "7": { valor: 120000, imposto: 10800, dataConclusao: "2026-02-10" },
+              "8": { valor: 35000, imposto: 3150, dataConclusao: "2026-02-18" },
+              "9": { valor: 8500, imposto: 2200, dataConclusao: "2026-02-05" },
             };
             const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -584,7 +664,7 @@ export default function Contador() {
               <div className="space-y-2">
                 {concluidos.map((s) => {
                   const producer = produtores.find((p) => p.id === s.producerId);
-                  const meta = metaConcluidos[s.id];
+                  const meta = metaConcluidos[String(s.id)];
                   return (
                     <Card key={s.id} className="shadow-sm">
                       <CardContent className="py-3 px-4 space-y-2">

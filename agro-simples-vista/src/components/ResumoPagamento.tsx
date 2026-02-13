@@ -166,14 +166,15 @@ function formatDate(iso: string) {
 }
 
 interface Props {
-  solicitacaoId: number | null;
+  solicitacaoId: string | number | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
 export default function ResumoPagamento({ solicitacaoId, open, onOpenChange }: Props) {
   const [detalheIdx, setDetalheIdx] = useState<number | null>(null);
-  const resumo = solicitacaoId ? resumosMock[solicitacaoId] : null;
+  const resumoKey = solicitacaoId !== null ? Number(solicitacaoId) : null;
+  const resumo = resumoKey ? resumosMock[resumoKey] : null;
 
   if (!resumo) {
     return (

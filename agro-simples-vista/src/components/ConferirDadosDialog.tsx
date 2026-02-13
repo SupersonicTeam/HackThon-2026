@@ -25,15 +25,23 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { FileText, Image, Sparkles, Save, CheckCircle, Plus, AlertTriangle } from "lucide-react";
-import type { SolicitacaoContador } from "@/mocks/requests";
 import { tiposDocumento } from "@/mocks";
 
+interface SolicitacaoBase {
+  id: string | number;
+  titulo: string;
+  categoria: string;
+  prazo: string;
+  observacao?: string;
+  arquivoNome?: string;
+}
+
 interface Props {
-  solicitacao: SolicitacaoContador | null;
+  solicitacao: SolicitacaoBase | null;
   open: boolean;
   onOpenChange: (v: boolean) => void;
-  onSave: (id: number, data: Record<string, string>) => void;
-  onApprove: (id: number) => void;
+  onSave: (id: string | number, data: Record<string, string>) => void;
+  onApprove: (id: string | number) => void;
 }
 
 // ── NF-e types ──
@@ -143,8 +151,8 @@ const nfeMockTransporte: TransporteNFe = {
 };
 
 // Simple generic mock for non-NF-e docs
-const genericSuggested: Record<number, { tipo: string; data: string; valor: string; uf: string; municipio: string; ncm: string; observacao: string }> = {
-  3: { tipo: "Salário", data: "2026-01-31", valor: "8500", uf: "PR", municipio: "Londrina", ncm: "", observacao: "Folha de pagamento referente a janeiro/2026" },
+const genericSuggested: Record<string, { tipo: string; data: string; valor: string; uf: string; municipio: string; ncm: string; observacao: string }> = {
+  "3": { tipo: "Salário", data: "2026-01-31", valor: "8500", uf: "PR", municipio: "Londrina", ncm: "", observacao: "Folha de pagamento referente a janeiro/2026" },
 };
 
 const cstOptions = ["000", "010", "020", "030", "040", "041", "050", "051", "060", "070", "090"];
@@ -193,7 +201,7 @@ export default function ConferirDadosDialog({ solicitacao, open, onOpenChange, o
       setTransporte({ ...nfeMockTransporte });
       setHasSuggestion(true);
     } else {
-      const suggested = genericSuggested[solicitacao.id];
+      const suggested = genericSuggested[String(solicitacao.id)];
       if (suggested) {
         setTipo(suggested.tipo);
         setData(suggested.data);
