@@ -4,13 +4,13 @@
 
 ### 📊 Dashboard Financeiro
 
-- [ ] Upload de notas (foto ou PDF)
-- [ ] Registro automático de entradas/saídas
-- [ ] Fluxo de caixa
-- [ ] Cálculo estimado de impostos
-- [ ] Calculadora de Impostos
-  - [ ] Calcular imposto por produto
-  - [ ] Simulação de preço para melhor lucro
+- [X] Upload de notas (foto ou PDF)
+- [X] Registro automático de entradas/saídas
+- [X] Fluxo de caixa
+- [X] Cálculo estimado de impostos
+- [X] Calculadora de Impostos
+  - [X] Calcular imposto por produto
+  - [X] Simulação de preço para melhor lucro
 
 ---
 
