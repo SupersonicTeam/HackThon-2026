@@ -4,7 +4,7 @@
 
 ### 📊 Dashboard Financeiro
 
-- [X] Upload de notas (foto ou PDF)
+- [ ] Upload de notas (foto ou PDF)
 - [ ] Registro automático de entradas/saídas
 - [ ] Fluxo de caixa
 - [ ] Cálculo estimado de impostos
@@ -16,13 +16,13 @@
 
 ### 🤖 Assistente IA Personalizado
 
-- [ ] Chatbot com linguagem simples
-- [ ] Responde dúvidas fiscais
-- [ ] Utiliza dados reais das notas do usuário
-- [ ] Simulações e previsões tributárias
-- [ ] Orientações sobre preenchimento correto de notas
-- [ ] Dicas para melhorar lucro
-- [ ] Prevenção de erros humanos
+- [X] Chatbot com linguagem simples
+- [X] Responde dúvidas fiscais
+- [X] Utiliza dados reais das notas do usuário
+- [X] Simulações e previsões tributárias
+- [X] Orientações sobre preenchimento correto de notas
+- [X] Dicas para melhorar lucro
+- [X] Prevenção de erros humanos
 
 ---
 
