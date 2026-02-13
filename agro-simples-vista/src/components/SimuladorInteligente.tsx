@@ -238,7 +238,7 @@ export default function SimuladorInteligente() {
         <CardHeader className="pb-3">
           <CardTitle className="text-base font-semibold flex items-center gap-2">
             <Calculator size={20} className="text-primary" />
-            Simulador de Tributos
+            Relatório inteligente
           </CardTitle>
           <CardDescription className="text-sm">
             Estimativa automática com base nos documentos anexados
@@ -286,7 +286,7 @@ export default function SimuladorInteligente() {
                       className="gap-1 text-xs cursor-help"
                     >
                       <Info size={12} />
-                      {fluxoCaixa ? "Dados reais" : "Estimativa automática"}
+                      {fluxoCaixa ? "Dados aproximados" : "Estimativa automática"}
                     </Badge>
                   </TooltipTrigger>
                   <TooltipContent>
