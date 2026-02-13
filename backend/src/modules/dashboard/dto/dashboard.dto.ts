@@ -684,3 +684,348 @@ export class CompararCenariosDto {
   @IsNotEmpty()
   margensTeste: number[];
 }
+
+// ==========================================
+// GERAÇÃO DE NOTA FISCAL DTOs
+// ==========================================
+
+/**
+ * DTO para criar um rascunho de nota fiscal
+ */
+export class CreateRascunhoNotaDto {
+  @ApiProperty({ description: 'ID do produtor que está criando o rascunho' })
+  @IsString()
+  @IsNotEmpty()
+  produtorId: string;
+
+  @ApiPropertyOptional({ description: 'ID do contador responsável' })
+  @IsString()
+  @IsOptional()
+  contadorId?: string;
+
+  @ApiProperty({
+    description: 'Tipo de nota fiscal',
+    enum: ['entrada', 'saida'],
+    example: 'saida',
+  })
+  @IsEnum(['entrada', 'saida'])
+  tipo: 'entrada' | 'saida';
+
+  @ApiPropertyOptional({ description: 'CFOP da operação', example: '5102' })
+  @IsString()
+  @IsOptional()
+  cfop?: string;
+
+  @ApiPropertyOptional({
+    description: 'Natureza da operação',
+    example: 'Venda de produtos agrícolas',
+  })
+  @IsString()
+  @IsOptional()
+  naturezaOperacao?: string;
+
+  @ApiProperty({
+    description: 'Nome/Razão social do destinatário',
+    example: 'Cooperativa Agrícola ABC Ltda',
+  })
+  @IsString()
+  @IsNotEmpty()
+  nomeDestinatario: string;
+
+  @ApiPropertyOptional({
+    description: 'CPF/CNPJ do destinatário',
+    example: '12.345.678/0001-00',
+  })
+  @IsString()
+  @IsOptional()
+  cpfCnpjDestinatario?: string;
+
+  @ApiPropertyOptional({ description: 'Estado de destino', example: 'SP' })
+  @IsString()
+  @IsOptional()
+  ufDestino?: string;
+
+  @ApiProperty({
+    description: 'Data prevista para emissão',
+    example: '2026-02-15',
+  })
+  @IsDateString()
+  dataEmissao: string;
+
+  @ApiPropertyOptional({
+    description: 'Observações do produtor',
+    example: 'Primeira venda da safra 2026',
+  })
+  @IsString()
+  @IsOptional()
+  observacoes?: string;
+
+  @ApiProperty({
+    description: 'Itens do rascunho de nota fiscal',
+    type: [CreateItemNotaFiscalDto],
+  })
+  @IsArray()
+  @IsNotEmpty()
+  itens: CreateItemNotaFiscalDto[];
+}
+
+/**
+ * DTO para atualizar um rascunho existente
+ */
+export class UpdateRascunhoNotaDto {
+  @ApiPropertyOptional({ description: 'CFOP da operação' })
+  @IsString()
+  @IsOptional()
+  cfop?: string;
+
+  @ApiPropertyOptional({ description: 'Natureza da operação' })
+  @IsString()
+  @IsOptional()
+  naturezaOperacao?: string;
+
+  @ApiPropertyOptional({ description: 'Nome do destinatário' })
+  @IsString()
+  @IsOptional()
+  nomeDestinatario?: string;
+
+  @ApiPropertyOptional({ description: 'CPF/CNPJ do destinatário' })
+  @IsString()
+  @IsOptional()
+  cpfCnpjDestinatario?: string;
+
+  @ApiPropertyOptional({ description: 'Estado de destino' })
+  @IsString()
+  @IsOptional()
+  ufDestino?: string;
+
+  @ApiPropertyOptional({ description: 'Data prevista para emissão' })
+  @IsDateString()
+  @IsOptional()
+  dataEmissao?: string;
+
+  @ApiPropertyOptional({ description: 'Observações do produtor' })
+  @IsString()
+  @IsOptional()
+  observacoes?: string;
+
+  @ApiPropertyOptional({
+    description: 'Itens atualizados do rascunho',
+    type: [CreateItemNotaFiscalDto],
+  })
+  @IsArray()
+  @IsOptional()
+  itens?: CreateItemNotaFiscalDto[];
+}
+
+/**
+ * DTO para feedback do contador sobre o rascunho
+ */
+export class FeedbackContadorDto {
+  @ApiProperty({
+    description: 'Status do feedback',
+    enum: ['aprovado', 'reprovado', 'revisao_necessaria'],
+    example: 'revisao_necessaria',
+  })
+  @IsEnum(['aprovado', 'reprovado', 'revisao_necessaria'])
+  status: 'aprovado' | 'reprovado' | 'revisao_necessaria';
+
+  @ApiPropertyOptional({
+    description: 'Comentários do contador',
+    example: 'CFOP incorreto para este tipo de operação. Sugiro usar 5102.',
+  })
+  @IsString()
+  @IsOptional()
+  comentarios?: string;
+
+  @ApiPropertyOptional({
+    description: 'Correções sugeridas pelo contador',
+    example: 'Alterar CFOP para 5102 e incluir NCM correto nos itens.',
+  })
+  @IsString()
+  @IsOptional()
+  correcoesSugeridas?: string;
+
+  @ApiPropertyOptional({
+    description: 'Dados corrigidos pelo contador (JSON)',
+    example: '{"cfop": "5102", "itens": [{"ncm": "12010000"}]}',
+  })
+  @IsString()
+  @IsOptional()
+  dadosCorrigidos?: string;
+}
+
+/**
+ * DTO para finalizar e gerar a nota fiscal oficial
+ */
+export class FinalizarNotaDto {
+  @ApiPropertyOptional({
+    description: 'Aplicar correções do contador automaticamente',
+    example: true,
+  })
+  @IsBoolean()
+  @IsOptional()
+  aplicarCorrecoes?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Observações finais do produtor',
+    example: 'Nota revisada conforme orientação do contador.',
+  })
+  @IsString()
+  @IsOptional()
+  observacoesFinal?: string;
+}
+
+/**
+ * DTO para geração direta de nota (sem rascunho)
+ */
+export class GerarNotaDiretaDto {
+  @ApiProperty({ description: 'ID do produtor' })
+  @IsString()
+  @IsNotEmpty()
+  produtorId: string;
+
+  @ApiProperty({
+    description: 'Tipo de nota fiscal',
+    enum: ['entrada', 'saida'],
+    example: 'saida',
+  })
+  @IsEnum(['entrada', 'saida'])
+  tipo: 'entrada' | 'saida';
+
+  @ApiProperty({ description: 'CFOP da operação', example: '5102' })
+  @IsString()
+  @IsNotEmpty()
+  cfop: string;
+
+  @ApiProperty({
+    description: 'Natureza da operação',
+    example: 'Venda de produtos agrícolas',
+  })
+  @IsString()
+  @IsNotEmpty()
+  naturezaOperacao: string;
+
+  @ApiProperty({
+    description: 'Nome do destinatário',
+    example: 'Cooperativa Agrícola ABC Ltda',
+  })
+  @IsString()
+  @IsNotEmpty()
+  nomeDestinatario: string;
+
+  @ApiProperty({
+    description: 'CPF/CNPJ do destinatário',
+    example: '12.345.678/0001-00',
+  })
+  @IsString()
+  @IsNotEmpty()
+  cpfCnpjDestinatario: string;
+
+  @ApiProperty({ description: 'Estado de destino', example: 'SP' })
+  @IsString()
+  @IsNotEmpty()
+  ufDestino: string;
+
+  @ApiProperty({
+    description: 'Data de emissão',
+    example: '2026-02-15',
+  })
+  @IsDateString()
+  dataEmissao: string;
+
+  @ApiPropertyOptional({
+    description: 'Observações',
+    example: 'Venda direta para cooperativa',
+  })
+  @IsString()
+  @IsOptional()
+  observacoes?: string;
+
+  @ApiProperty({
+    description: 'Itens da nota fiscal',
+    type: [CreateItemNotaFiscalDto],
+  })
+  @IsArray()
+  @IsNotEmpty()
+  itens: CreateItemNotaFiscalDto[];
+}
+
+/**
+ * DTO de resposta para rascunho de nota fiscal
+ */
+export class RascunhoNotaResponseDto {
+  @ApiProperty({ description: 'ID do rascunho' })
+  id: string;
+
+  @ApiProperty({ description: 'ID do produtor' })
+  produtorId: string;
+
+  @ApiPropertyOptional({ description: 'ID do contador' })
+  contadorId?: string;
+
+  @ApiProperty({ description: 'Tipo de nota', enum: ['entrada', 'saida'] })
+  tipo: 'entrada' | 'saida';
+
+  @ApiPropertyOptional({ description: 'CFOP da operação' })
+  cfop?: string;
+
+  @ApiPropertyOptional({ description: 'Natureza da operação' })
+  naturezaOperacao?: string;
+
+  @ApiProperty({ description: 'Nome do destinatário' })
+  nomeDestinatario: string;
+
+  @ApiPropertyOptional({ description: 'CPF/CNPJ do destinatário' })
+  cpfCnpjDestinatario?: string;
+
+  @ApiPropertyOptional({ description: 'Estado de destino' })
+  ufDestino?: string;
+
+  @ApiProperty({ description: 'Data prevista para emissão' })
+  dataEmissao: string;
+
+  @ApiPropertyOptional({ description: 'Observações do produtor' })
+  observacoes?: string;
+
+  @ApiProperty({
+    description: 'Status do rascunho',
+    enum: [
+      'draft',
+      'enviado',
+      'revisao',
+      'aprovado',
+      'reprovado',
+      'finalizado',
+    ],
+  })
+  status: string;
+
+  @ApiPropertyOptional({ description: 'Feedback do contador' })
+  feedbackContador?: string;
+
+  @ApiPropertyOptional({ description: 'Correções sugeridas' })
+  correcoesSugeridas?: string;
+
+  @ApiPropertyOptional({ description: 'Dados corrigidos (JSON)' })
+  dadosCorrigidos?: string;
+
+  @ApiProperty({ description: 'Data de criação' })
+  createdAt: Date;
+
+  @ApiProperty({ description: 'Data de atualização' })
+  updatedAt: Date;
+
+  @ApiPropertyOptional({
+    description: 'ID da nota final (se já foi finalizada)',
+  })
+  notaFinalId?: string;
+
+  @ApiProperty({
+    description: 'Itens do rascunho',
+    type: [CreateItemNotaFiscalDto],
+  })
+  itens: CreateItemNotaFiscalDto[];
+
+  @ApiPropertyOptional({ description: 'Valor total calculado' })
+  valorTotal?: number;
+}

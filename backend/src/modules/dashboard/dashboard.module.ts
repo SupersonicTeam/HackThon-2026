@@ -5,6 +5,7 @@ import { ProdutorService } from './produtor.service';
 import { NotaFiscalService } from './nota-fiscal.service';
 import { OcrService } from './ocr.service';
 import { CalculadoraService } from './calculadora.service';
+import { GeracaoNotaFiscalService } from './geracao-nota-fiscal.service';
 import { PrismaModule } from '../../prisma/prisma.module';
 
 @Module({
@@ -16,6 +17,7 @@ import { PrismaModule } from '../../prisma/prisma.module';
     NotaFiscalService,
     OcrService,
     CalculadoraService,
+    GeracaoNotaFiscalService,
   ],
   exports: [DashboardService, ProdutorService, NotaFiscalService],
 })

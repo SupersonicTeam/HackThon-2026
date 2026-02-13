@@ -7,7 +7,6 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 // ==========================================
@@ -32,6 +31,12 @@ model Produtor {
   // Relacionamentos
   notas     NotaFiscal[]
   impostos  ImpostoCalculado[]
+  rascunhos RascunhoNota[]
+  eventosFiscais EventoFiscal[]
+  notificacoesFiscais NotificacaoFiscal[]
+  relatoriosMensais RelatorioMensal[]
+  pendenciasContador PendenciaContador[]
+  pacotesDocumentos PacoteDocumentos[]
   
   @@map("produtores")
 }
@@ -89,7 +94,7 @@ model NotaFiscal {
   // Relacionamentos
   produtor        Produtor @relation(fields: [produtorId], references: [id], onDelete: Cascade)
   itens           ItemNotaFiscal[]
-  
+  rascunhos       RascunhoNota[]  
   @@map("notas_fiscais")
   @@index([produtorId])
   @@index([tipo])
@@ -190,4 +195,297 @@ model ImpostoCalculado {
 // ==========================================
 // Será calculado dinamicamente das notas fiscais
 // Não precisa de tabela separada - view/query agregada
+
+// ==========================================
+// SISTEMA DE GERAÇÃO DE NOTAS FISCAIS
+// ==========================================
+
+// Rascunho de Nota Fiscal
+model RascunhoNota {
+  id                   String   @id @default(cuid())
+  
+  // Relacionamentos
+  produtorId          String
+  produtor            Produtor @relation(fields: [produtorId], references: [id])
+  contadorId          String?
+  
+  // Dados da Nota
+  tipo                String   // 'entrada' | 'saida'
+  cfop                String?
+  naturezaOperacao    String?
+  nomeDestinatario    String
+  cpfCnpjDestinatario String?
+  ufDestino           String?
+  dataEmissao         DateTime
+  valorTotal          Float    @default(0)
+  observacoes         String?
+  
+  // Controle de Workflow
+  status              String   @default("draft") // draft, enviado, revisao, aprovado, reprovado, finalizado
+  chaveTemporaria     String   @unique
+  
+  // Feedback do Contador
+  feedbackContador    String?
+  correcoesSugeridas  String?
+  dadosCorrigidos     String? // JSON com correções
+  
+  // Relacionamento com Nota Final
+  notaFinalId         String?
+  notaFinal          NotaFiscal? @relation(fields: [notaFinalId], references: [id])
+  
+  // Timestamps
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  dataEnvio          DateTime?
+  dataFeedback       DateTime?
+  dataFinalizacao    DateTime?
+  
+  // Itens do Rascunho
+  itens              ItemRascunhoNota[]
+  
+  @@map("rascunhos_nota")
+}
+
+// Item do Rascunho de Nota Fiscal
+model ItemRascunhoNota {
+  id                String  @id @default(cuid())
+  
+  // Relacionamento com Rascunho
+  rascunhoNotaId    String
+  rascunhoNota      RascunhoNota @relation(fields: [rascunhoNotaId], references: [id], onDelete: Cascade)
+  
+  // Dados do Item
+  numeroItem        Int
+  codigoProduto     String?
+  descricao         String
+  ncm               String?
+  cfop              String?
+  unidade           String?
+  quantidade        Float
+  valorUnitario     Float
+  valorTotal        Float
+  valorDesconto     Float?
+  valorFrete        Float?
+  
+  // Impostos do Item
+  baseCalculoIcms   Float?
+  valorIcms         Float?
+  aliquotaIcms      Float?
+  baseCalculoIpi    Float?
+  valorIpi          Float?
+  aliquotaIpi       Float?
+  valorCbs          Float?
+  valorIbs          Float?
+  valorFunrural     Float?
+  
+  informacoes       String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  @@map("itens_rascunho_nota")
+}
+
+// ==========================================
+// SISTEMA DE CALENDÁRIO FISCAL
+// ==========================================
+
+// Evento Fiscal
+model EventoFiscal {
+  id               String   @id @default(cuid())
+  produtorId       String
+  
+  // Dados do Evento
+  nome             String
+  descricao        String
+  tipo             String   // 'mensal' | 'trimestral' | 'semestral' | 'anual' | 'unico'
+  diaVencimento    Int      // Dia do mês (1-31)
+  mesVencimento    Int?     // Mês específico para eventos anuais (1-12)
+  
+  // Controle
+  ativo            Boolean  @default(true)
+  obrigatorio      Boolean  @default(false)
+  regime           String   // JSON array de regimes que se aplicam
+  valor            Float?
+  observacoes      String?
+  
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  
+  // Relacionamentos
+  produtor         Produtor @relation(fields: [produtorId], references: [id], onDelete: Cascade)
+  notificacoes     NotificacaoFiscal[]
+  
+  @@map("eventos_fiscais")
+  @@index([produtorId])
+  @@index([tipo])
+  @@index([diaVencimento])
+}
+
+// Notificação Fiscal
+model NotificacaoFiscal {
+  id               String   @id @default(cuid())
+  produtorId       String
+  eventoFiscalId   String
+  
+  // Dados da Notificação
+  dataVencimento   DateTime
+  diasAntecedencia Int
+  dataNotificacao  DateTime
+  
+  // Status e Envio
+  enviado          Boolean  @default(false)
+  dataEnvio        DateTime?
+  tipo             String   // 'email' | 'whatsapp' | 'sistema'
+  mensagem         String
+  
+  // Controle de tentativas
+  tentativasEnvio  Int      @default(0)
+  ultimaTentativa  DateTime?
+  erro             String?
+  
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  
+  // Relacionamentos
+  produtor         Produtor @relation(fields: [produtorId], references: [id], onDelete: Cascade)
+  eventoFiscal     EventoFiscal @relation(fields: [eventoFiscalId], references: [id], onDelete: Cascade)
+  
+  @@map("notificacoes_fiscais")
+  @@index([produtorId])
+  @@index([dataVencimento])
+  @@index([enviado])
+}
+
+// Relatório Mensal
+model RelatorioMensal {
+  id               String   @id @default(cuid())
+  produtorId       String
+  
+  // Período
+  mes              Int      // 1-12
+  ano              Int      // 2026
+  
+  // Dados do Relatório
+  dataGeracao      DateTime @default(now())
+  linkDownload     String
+  nomeArquivo      String
+  tamanho          Int?     // Tamanho em bytes
+  
+  // Envio para contador
+  contadorEmail    String?
+  enviado          Boolean  @default(false)
+  dataEnvio        DateTime?
+  
+  // Configuração automática
+  envioAutomatico  Boolean  @default(false)
+  diaEnvio         Int?     // Dia do mês para envio
+  incluirAnexos    String?  // JSON array dos anexos
+  
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  
+  // Relacionamento
+  produtor         Produtor @relation(fields: [produtorId], references: [id], onDelete: Cascade)
+  
+  @@map("relatorios_mensais")
+  @@index([produtorId])
+  @@index([mes, ano])
+  @@unique([produtorId, mes, ano])
+}
+
+// Pendência do Contador
+model PendenciaContador {
+  id               String   @id @default(cuid())
+  produtorId       String
+  contadorId       String?
+  
+  // Dados da Pendência
+  titulo           String
+  descricao        String
+  dataLimite       DateTime
+  dataCriacao      DateTime @default(now())
+  dataAtendimento  DateTime?
+  
+  // Status e Prioridade
+  status           String   @default("pendente") // 'pendente' | 'em-andamento' | 'concluida' | 'vencida'
+  prioridade       String   // 'baixa' | 'media' | 'alta' | 'urgente'
+  
+  // Documentos Solicitados
+  tiposDocumentos  String   // JSON array: ['folha-pagamento', 'nf-entrada', 'nf-saida']
+  observacoes      String?
+  observacoesProduto String?
+  
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  
+  // Relacionamentos
+  produtor         Produtor @relation(fields: [produtorId], references: [id], onDelete: Cascade)
+  documentos       DocumentoAnexado[]
+  pacotes          PacoteDocumentos[]
+  
+  @@map("pendencias_contador")
+  @@index([produtorId])
+  @@index([status])
+  @@index([dataLimite])
+  @@index([prioridade])
+}
+
+// Documento Anexado
+model DocumentoAnexado {
+  id               String   @id @default(cuid())
+  pendenciaId      String
+  
+  // Dados do Documento
+  nomeArquivo      String
+  tipoDocumento    String   // 'folha-pagamento', 'nf-entrada', 'nf-saida', etc
+  tamanho          Int      // Tamanho em bytes
+  caminhoArquivo   String
+  checksum         String?  // Hash do arquivo para verificação
+  
+  dataUpload       DateTime @default(now())
+  
+  // Relacionamento
+  pendencia        PendenciaContador @relation(fields: [pendenciaId], references: [id], onDelete: Cascade)
+  
+  @@map("documentos_anexados")
+  @@index([pendenciaId])
+  @@index([tipoDocumento])
+}
+
+// Pacote de Documentos
+model PacoteDocumentos {
+  id               String   @id @default(cuid())
+  pendenciaId      String
+  produtorId       String
+  
+  // Dados do Pacote
+  nomePacote       String
+  nomeArquivoZip   String
+  linkDownload     String
+  senha            String?
+  tamanho          Int      // Tamanho em bytes
+  quantidadeArquivos Int
+  
+  // Controle de Acesso
+  dataGeracao      DateTime @default(now())
+  dataExpiracao    DateTime // 7 dias após geração
+  downloads        Int      @default(0)
+  ultimoDownload   DateTime?
+  
+  // Notificação
+  contadorNotificado Boolean @default(false)
+  dataNotificacao  DateTime?
+  
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  
+  // Relacionamentos
+  pendencia        PendenciaContador @relation(fields: [pendenciaId], references: [id], onDelete: Cascade)
+  produtor         Produtor @relation(fields: [produtorId], references: [id], onDelete: Cascade)
+  
+  @@map("pacotes_documentos")
+  @@index([produtorId])
+  @@index([pendenciaId])
+  @@index([dataExpiracao])
+}
 
