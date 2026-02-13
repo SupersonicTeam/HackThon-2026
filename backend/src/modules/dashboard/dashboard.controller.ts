@@ -27,6 +27,7 @@ import { DashboardService } from './dashboard.service';
 import { ProdutorService } from './produtor.service';
 import { NotaFiscalService } from './nota-fiscal.service';
 import { OcrService } from './ocr.service';
+import { CalculadoraService } from './calculadora.service';
 import {
   CreateProdutorDto,
   UpdateProdutorDto,
@@ -35,6 +36,9 @@ import {
   DashboardQueryDto,
   DashboardResumoDto,
   FluxoCaixaDto,
+  CalcularImpostosDto,
+  SimularPrecoVendaDto,
+  CompararCenariosDto,
 } from './dto/dashboard.dto';
 
 @ApiTags('Dashboard')
@@ -45,6 +49,7 @@ export class DashboardController {
     private readonly produtorService: ProdutorService,
     private readonly notaFiscalService: NotaFiscalService,
     private readonly ocrService: OcrService,
+    private readonly calculadoraService: CalculadoraService,
   ) {}
 
   // ==================== PRODUTORES ====================
@@ -408,5 +413,75 @@ export class DashboardController {
     @Param('ano') ano: number,
   ) {
     return this.dashboardService.getEvolucaoMensal(produtorId, +ano);
+  }
+
+  // ==================== CALCULADORA DE IMPOSTOS ====================
+  @Post('calculadora/impostos')
+  @ApiOperation({
+    summary: 'Calcular impostos (CBS + IBS) para uma operação',
+    description:
+      'Calculadora independente que não leva em conta perfil do produtor ou notas fiscais anteriores',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Cálculo de impostos CBS e IBS com base na Reforma Tributária',
+  })
+  calcularImpostos(@Body() dto: CalcularImpostosDto) {
+    return this.calculadoraService.calcularImpostos({
+      dataFatoGerador: dto.dataFatoGerador,
+      tipo: dto.tipo,
+      uf: dto.uf,
+      municipio: dto.municipio,
+      ncm: dto.ncm,
+      cst: dto.cst,
+      classificacaoTributaria: dto.classificacaoTributaria,
+      valorBaseCalculo: dto.valorBaseCalculo,
+      quantidade: dto.quantidade,
+      unidadeMedida: dto.unidadeMedida,
+    });
+  }
+
+  @Post('calculadora/simular-preco')
+  @ApiOperation({
+    summary:
+      'Simular melhor preço de venda para obter margem de lucro desejada',
+    description:
+      'Calcula o preço de venda ideal considerando impostos para atingir a margem de lucro desejada',
+  })
+  @ApiResponse({
+    status: 200,
+    description:
+      'Preço sugerido, impostos calculados e margem de lucro real após impostos',
+  })
+  simularPrecoVenda(@Body() dto: SimularPrecoVendaDto) {
+    return this.calculadoraService.simularPrecoVenda({
+      custoProducao: dto.custoProducao,
+      quantidade: dto.quantidade,
+      margemLucroDesejada: dto.margemLucroDesejada,
+      tipo: dto.tipo,
+      uf: dto.uf,
+      classificacaoTributaria: dto.classificacaoTributaria,
+    });
+  }
+
+  @Post('calculadora/comparar-cenarios')
+  @ApiOperation({
+    summary: 'Comparar diferentes cenários de margem de lucro',
+    description:
+      'Compara múltiplas margens de lucro para identificar o melhor preço de venda',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Comparação de cenários com diferentes margens de lucro',
+  })
+  compararCenarios(@Body() dto: CompararCenariosDto) {
+    return this.calculadoraService.compararCenarios({
+      custoProducao: dto.custoProducao,
+      quantidade: dto.quantidade,
+      tipo: dto.tipo,
+      uf: dto.uf,
+      classificacaoTributaria: dto.classificacaoTributaria,
+      margensTeste: dto.margensTeste,
+    });
   }
 }

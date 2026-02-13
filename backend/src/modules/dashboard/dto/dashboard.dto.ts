@@ -525,3 +525,162 @@ export class DashboardResumoDto {
     total: number;
   };
 }
+
+// ==========================================
+// CALCULADORA DTOs
+// ==========================================
+export class CalcularImpostosDto {
+  @ApiProperty({
+    description: 'Data do fato gerador',
+    example: '2026-02-12',
+  })
+  @IsDateString()
+  @IsNotEmpty()
+  dataFatoGerador: string;
+
+  @ApiProperty({
+    description: 'Tipo de operação',
+    enum: ['bem', 'servico'],
+    example: 'bem',
+  })
+  @IsEnum(['bem', 'servico'])
+  @IsNotEmpty()
+  tipo: 'bem' | 'servico';
+
+  @ApiProperty({ description: 'UF', example: 'PR' })
+  @IsString()
+  @IsNotEmpty()
+  uf: string;
+
+  @ApiProperty({ description: 'Município', example: 'Cascavel' })
+  @IsString()
+  @IsNotEmpty()
+  municipio: string;
+
+  @ApiProperty({ description: 'NCM', example: '12019000' })
+  @IsString()
+  @IsNotEmpty()
+  ncm: string;
+
+  @ApiProperty({
+    description: 'CST (Código de Situação Tributária)',
+    example: '10',
+  })
+  @IsString()
+  @IsNotEmpty()
+  cst: string;
+
+  @ApiProperty({
+    description: 'Classificação tributária',
+    example: 'Operação com alíquota reduzida',
+  })
+  @IsString()
+  @IsNotEmpty()
+  classificacaoTributaria: string;
+
+  @ApiProperty({
+    description: 'Valor da base de cálculo (R$)',
+    example: 1000000,
+  })
+  @IsNumber()
+  @IsNotEmpty()
+  valorBaseCalculo: number;
+
+  @ApiProperty({ description: 'Quantidade', example: 1 })
+  @IsNumber()
+  @IsNotEmpty()
+  quantidade: number;
+
+  @ApiProperty({
+    description: 'Unidade de medida',
+    example: 'UN',
+  })
+  @IsString()
+  @IsNotEmpty()
+  unidadeMedida: string;
+}
+
+export class SimularPrecoVendaDto {
+  @ApiProperty({ description: 'Custo de produção unitário', example: 50 })
+  @IsNumber()
+  @IsNotEmpty()
+  custoProducao: number;
+
+  @ApiProperty({ description: 'Quantidade', example: 1000 })
+  @IsNumber()
+  @IsNotEmpty()
+  quantidade: number;
+
+  @ApiProperty({
+    description: 'Margem de lucro desejada (%)',
+    example: 30,
+  })
+  @IsNumber()
+  @IsNotEmpty()
+  margemLucroDesejada: number;
+
+  @ApiProperty({
+    description: 'Tipo de operação',
+    enum: ['bem', 'servico'],
+    example: 'bem',
+  })
+  @IsEnum(['bem', 'servico'])
+  @IsNotEmpty()
+  tipo: 'bem' | 'servico';
+
+  @ApiPropertyOptional({ description: 'UF', example: 'PR' })
+  @IsString()
+  @IsOptional()
+  uf?: string;
+
+  @ApiPropertyOptional({
+    description: 'Classificação tributária',
+    example: 'Agropecuário',
+  })
+  @IsString()
+  @IsOptional()
+  classificacaoTributaria?: string;
+}
+
+export class CompararCenariosDto {
+  @ApiProperty({ description: 'Custo de produção unitário', example: 50 })
+  @IsNumber()
+  @IsNotEmpty()
+  custoProducao: number;
+
+  @ApiProperty({ description: 'Quantidade', example: 1000 })
+  @IsNumber()
+  @IsNotEmpty()
+  quantidade: number;
+
+  @ApiProperty({
+    description: 'Tipo de operação',
+    enum: ['bem', 'servico'],
+    example: 'bem',
+  })
+  @IsEnum(['bem', 'servico'])
+  @IsNotEmpty()
+  tipo: 'bem' | 'servico';
+
+  @ApiPropertyOptional({ description: 'UF', example: 'PR' })
+  @IsString()
+  @IsOptional()
+  uf?: string;
+
+  @ApiPropertyOptional({
+    description: 'Classificação tributária',
+    example: 'Soja',
+  })
+  @IsString()
+  @IsOptional()
+  classificacaoTributaria?: string;
+
+  @ApiProperty({
+    description: 'Margens de lucro para testar (%)',
+    example: [20, 30, 40, 50],
+    type: [Number],
+  })
+  @IsArray()
+  @IsNotEmpty()
+  margensTeste: number[];
+}
