@@ -272,15 +272,6 @@ export default function Dashboard() {
                   : formatCurrency(fluxoCaixa?.totalImpostos ?? 6850)}
               </span>
             </div>
-            <div className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1.5 rounded-full bg-primary/10 text-xs sm:text-sm">
-              <TrendingUp size={12} className="text-primary shrink-0" />
-              <span className="text-muted-foreground hidden sm:inline">Alíquota:</span>
-              <span className="font-semibold text-primary">
-                {loadingFluxo
-                  ? "..."
-                  : `${(((fluxoCaixa?.totalImpostos ?? 6850) / ((resumoFinanceiro.entradas || 1) + (fluxoCaixa?.totalImpostos ?? 6850))) * 100).toFixed(1)}%`}
-              </span>
-            </div>
           </div>
 
           {/* Explicação do imposto - escondida no mobile */}
