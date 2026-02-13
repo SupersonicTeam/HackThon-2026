@@ -28,21 +28,21 @@
 
 ### 📅 Calendário Fiscal
 
-- [ ] Prazos e obrigações fiscais
-- [ ] Notificações automáticas
-- [ ] Envio mensal automático de documentos ao contador via link
+- [x] Prazos e obrigações fiscais
+- [x] Notificações automáticas
+- [x] Envio mensal automático de documentos ao contador via link
 
 ---
 
 ### 📝 Geração de Nota Fiscal
 
-- [x] Tela de geração de notas fiscais
-- [x] Sistema de rascunho
-- [x] Criar rascunho de nota
-- [x] Enviar rascunho para contador
-- [x] Receber feedback do contador
-- [x] Finalizar nota após revisão
-- [x] Geração direta de nota (sem rascunho)
+- [ ] Tela de geração de notas fiscais
+- [ ] Sistema de rascunho
+- [ ] Criar rascunho de nota
+- [ ] Enviar rascunho para contador
+- [ ] Receber feedback do contador
+- [ ] Finalizar nota após revisão
+- [ ] Geração direta de nota (sem rascunho)
 
 ---
 
