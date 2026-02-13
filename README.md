@@ -36,13 +36,13 @@
 
 ### 📝 Geração de Nota Fiscal
 
-- [ ] Tela de geração de notas fiscais
-- [ ] Sistema de rascunho
-- [ ] Criar rascunho de nota
-- [ ] Enviar rascunho para contador
-- [ ] Receber feedback do contador
-- [ ] Finalizar nota após revisão
-- [ ] Geração direta de nota (sem rascunho)
+- [X] Tela de geração de notas fiscais
+- [X] Sistema de rascunho
+- [X] Criar rascunho de nota
+- [X] Enviar rascunho para contador
+- [X] Receber feedback do contador
+- [X] Finalizar nota após revisão
+- [X] Geração direta de nota (sem rascunho)
 
 ---
 
