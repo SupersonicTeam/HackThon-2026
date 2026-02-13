@@ -4,7 +4,7 @@
 
 ### 📊 Dashboard Financeiro
 
-- [ ] Upload de notas (foto ou PDF)
+- [X] Upload de notas (foto ou PDF)
 - [ ] Registro automático de entradas/saídas
 - [ ] Fluxo de caixa
 - [ ] Cálculo estimado de impostos
