@@ -56,3 +56,10 @@ pids
 report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 
 /generated/prisma
+
+# Uploads de notas fiscais (mantém a pasta, ignora os arquivos)
+uploads/notas/*
+!uploads/notas/.gitkeep
+
+# Arquivos temporários de conversão PDF
+uploads/temp/*

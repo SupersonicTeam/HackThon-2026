@@ -331,6 +331,15 @@ export class CreateNotaFiscalDto {
   @IsOptional()
   arquivoTipo?: string;
 
+  @ApiPropertyOptional({
+    description: 'Status da nota',
+    enum: ['pendente', 'validada', 'erro'],
+    example: 'validada',
+  })
+  @IsString()
+  @IsOptional()
+  status?: string;
+
   @ApiPropertyOptional({ description: 'Valor CBS total', example: 1760 })
   @IsNumber()
   @IsOptional()

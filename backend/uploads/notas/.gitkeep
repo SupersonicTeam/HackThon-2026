@@ -1,0 +1,2 @@
+# Esta pasta armazena os uploads de notas fiscais
+# Os arquivos serão salvos aqui automaticamente pelo endpoint POST /api/dashboard/notas/upload
