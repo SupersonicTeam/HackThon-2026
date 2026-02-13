@@ -69,7 +69,14 @@ export class DashboardService {
     const [entradas, saidas, qtdEntradas, qtdSaidas] = await Promise.all([
       this.prisma.notaFiscal.aggregate({
         where: { ...where, tipo: 'entrada' },
-        _sum: { valorTotal: true },
+        _sum: {
+          valorTotal: true,
+          valorCbs: true,
+          valorIbs: true,
+          valorFunrural: true,
+          valorIcms: true,
+          valorIpi: true,
+        },
       }),
       this.prisma.notaFiscal.aggregate({
         where: { ...where, tipo: 'saida' },
@@ -78,6 +85,8 @@ export class DashboardService {
           valorCbs: true,
           valorIbs: true,
           valorFunrural: true,
+          valorIcms: true,
+          valorIpi: true,
         },
       }),
       this.prisma.notaFiscal.count({
@@ -90,12 +99,25 @@ export class DashboardService {
 
     const totalEntradas = entradas._sum.valorTotal || 0;
     const totalSaidas = saidas._sum.valorTotal || 0;
+
+    // Soma TODOS os impostos (entradas e saídas)
     const totalImpostos =
+      (entradas._sum.valorCbs || 0) +
+      (entradas._sum.valorIbs || 0) +
+      (entradas._sum.valorFunrural || 0) +
+      (entradas._sum.valorIcms || 0) +
+      (entradas._sum.valorIpi || 0) +
       (saidas._sum.valorCbs || 0) +
       (saidas._sum.valorIbs || 0) +
-      (saidas._sum.valorFunrural || 0);
+      (saidas._sum.valorFunrural || 0) +
+      (saidas._sum.valorIcms || 0) +
+      (saidas._sum.valorIpi || 0);
+
     const saldo = totalSaidas - totalEntradas;
-    const lucroEstimado = saldo - totalImpostos;
+
+    // Lucro estimado = saldo (impostos já incluídos no valorTotal das notas)
+    // Se quiser ver lucro ANTES dos impostos: saldo + totalImpostos
+    const lucroEstimado = saldo;
 
     return {
       totalEntradas,

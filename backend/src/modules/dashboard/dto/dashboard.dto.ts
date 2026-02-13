@@ -485,13 +485,19 @@ export class FluxoCaixaDto {
   @ApiProperty({ description: 'Total de saídas (vendas)' })
   totalSaidas: number;
 
-  @ApiProperty({ description: 'Saldo (saídas - entradas)' })
+  @ApiProperty({ description: 'Saldo (vendas - compras)' })
   saldo: number;
 
-  @ApiProperty({ description: 'Total de impostos estimados' })
+  @ApiProperty({
+    description:
+      'Total de impostos pagos (CBS, IBS, FUNRURAL, ICMS, IPI) em compras e vendas',
+  })
   totalImpostos: number;
 
-  @ApiProperty({ description: 'Lucro estimado (saldo - impostos)' })
+  @ApiProperty({
+    description:
+      'Lucro estimado (igual ao saldo, pois impostos já estão incluídos no valorTotal das notas)',
+  })
   lucroEstimado: number;
 
   @ApiProperty({ description: 'Quantidade de notas de entrada' })
