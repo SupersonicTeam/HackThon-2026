@@ -161,17 +161,16 @@ export interface RascunhoNota {
 
 export interface CreateRascunhoDto {
   produtorId: string;
-  titulo?: string;
+  contadorId?: string;
   tipo: "entrada" | "saida";
-  naturezaOperacao?: string;
   cfop?: string;
-  destinatarioNome?: string;
-  destinatarioCpfCnpj?: string;
-  uf?: string;
-  municipio?: string;
-  valorTotal: number;
+  naturezaOperacao?: string;
+  nomeDestinatario: string;
+  cpfCnpjDestinatario?: string;
+  ufDestino?: string;
+  dataEmissao: string; // Data prevista para emissão (required)
   observacoes?: string;
-  itens: Omit<ItemRascunhoNota, "id">[];
+  itens: CreateItemNotaFiscalDto[];
 }
 
 export interface FeedbackRascunhoDto {
@@ -181,11 +180,15 @@ export interface FeedbackRascunhoDto {
 
 // Tipos de Geração de Nota Direta
 export interface CreateItemNotaFiscalDto {
+  numeroItem: number;
+  codigoProduto?: string;
   descricao: string;
   ncm?: string;
-  unidade: string;
+  cfop?: string;
+  unidade?: string;
   quantidade: number;
   valorUnitario: number;
+  valorTotal: number;
 }
 
 export interface GerarNotaDiretaDto {

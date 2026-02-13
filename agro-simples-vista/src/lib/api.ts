@@ -48,6 +48,15 @@ class ApiClient {
       const error = await response
         .json()
         .catch(() => ({ message: "Erro desconhecido" }));
+      
+      // Log mais detalhado para debugging
+      console.error('API Error:', {
+        status: response.status,
+        statusText: response.statusText,
+        endpoint,
+        error,
+      });
+      
       throw new Error(error.message || `HTTP ${response.status}`);
     }
 
