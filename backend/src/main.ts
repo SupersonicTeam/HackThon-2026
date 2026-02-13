@@ -14,7 +14,7 @@ async function bootstrap() {
     origin: [
       'http://localhost:5173',
       'http://localhost:8080',
-      'http://26.7.233.225:8080',
+      'http://10.35.41.217:8080',
       /^http:\/\/\d+\.\d+\.\d+\.\d+:\d+$/, // Accept any IP:port
     ],
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],

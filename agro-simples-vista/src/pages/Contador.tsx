@@ -324,13 +324,13 @@ export default function Contador() {
 
       {/* Sub-tabs */}
       <Tabs defaultValue="contatos">
-        <TabsList className="w-full grid grid-cols-6 h-auto overflow-x-auto">
-          <TabsTrigger value="contatos" className="text-[10px] sm:text-sm px-0.5 sm:px-3 py-2">Contatos</TabsTrigger>
-          <TabsTrigger value="solicitacoes" className="text-[10px] sm:text-sm px-0.5 sm:px-3 py-2">Solicitações</TabsTrigger>
-          <TabsTrigger value="recebidos" className="text-[10px] sm:text-sm px-0.5 sm:px-3 py-2">Recebidos</TabsTrigger>
-          <TabsTrigger value="rascunhos" className="text-[10px] sm:text-sm px-0.5 sm:px-3 py-2">Rascunhos</TabsTrigger>
-          <TabsTrigger value="concluidos" className="text-[10px] sm:text-sm px-0.5 sm:px-3 py-2">Concluídos</TabsTrigger>
-          <TabsTrigger value="documentos" className="text-[10px] sm:text-sm px-0.5 sm:px-3 py-2">Docs Oficiais</TabsTrigger>
+        <TabsList className="w-full grid grid-cols-3 sm:grid-cols-6 h-auto gap-1">
+          <TabsTrigger value="contatos" className="text-[10px] sm:text-xs px-1 sm:px-2 py-1.5">Contatos</TabsTrigger>
+          <TabsTrigger value="solicitacoes" className="text-[10px] sm:text-xs px-1 sm:px-2 py-1.5">Solic.</TabsTrigger>
+          <TabsTrigger value="recebidos" className="text-[10px] sm:text-xs px-1 sm:px-2 py-1.5">Recebidos</TabsTrigger>
+          <TabsTrigger value="rascunhos" className="text-[10px] sm:text-xs px-1 sm:px-2 py-1.5">Rascunhos</TabsTrigger>
+          <TabsTrigger value="concluidos" className="text-[10px] sm:text-xs px-1 sm:px-2 py-1.5">Concluídos</TabsTrigger>
+          <TabsTrigger value="documentos" className="text-[10px] sm:text-xs px-1 sm:px-2 py-1.5">Docs</TabsTrigger>
         </TabsList>
 
         {/* === TAB CONTATOS === */}

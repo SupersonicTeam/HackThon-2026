@@ -219,41 +219,41 @@ export default function Dashboard() {
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/60">
-              <TrendingDown size={22} className="text-destructive shrink-0" />
+          <div className="grid grid-cols-3 gap-2 sm:gap-4">
+            <div className="flex flex-col items-center sm:flex-row sm:items-center gap-1 sm:gap-3 p-2 sm:p-3 rounded-lg bg-muted/60 text-center sm:text-left">
+              <TrendingDown size={20} className="text-destructive shrink-0 hidden sm:block" />
               <div>
-                <p className="text-xs text-muted-foreground">Entradas</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground">Entradas</p>
                 {loadingFluxo ? (
-                  <Skeleton className="h-7 w-24" />
+                  <Skeleton className="h-5 sm:h-7 w-16 sm:w-24" />
                 ) : (
-                  <p className="text-lg font-heading font-bold text-foreground">
+                  <p className="text-sm sm:text-lg font-heading font-bold text-foreground">
                     {formatCurrency(resumoFinanceiro.entradas)}
                   </p>
                 )}
               </div>
             </div>
-            <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/60">
-              <TrendingUp size={22} className="text-primary shrink-0" />
+            <div className="flex flex-col items-center sm:flex-row sm:items-center gap-1 sm:gap-3 p-2 sm:p-3 rounded-lg bg-muted/60 text-center sm:text-left">
+              <TrendingUp size={20} className="text-primary shrink-0 hidden sm:block" />
               <div>
-                <p className="text-xs text-muted-foreground">Saídas</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground">Saídas</p>
                 {loadingFluxo ? (
-                  <Skeleton className="h-7 w-24" />
+                  <Skeleton className="h-5 sm:h-7 w-16 sm:w-24" />
                 ) : (
-                  <p className="text-lg font-heading font-bold text-foreground">
+                  <p className="text-sm sm:text-lg font-heading font-bold text-foreground">
                     {formatCurrency(resumoFinanceiro.saidas)}
                   </p>
                 )}
               </div>
             </div>
-            <div className="flex items-center gap-3 p-3 rounded-lg bg-primary/10">
-              <DollarSign size={22} className="text-primary shrink-0" />
+            <div className="flex flex-col items-center sm:flex-row sm:items-center gap-1 sm:gap-3 p-2 sm:p-3 rounded-lg bg-primary/10 text-center sm:text-left">
+              <DollarSign size={20} className="text-primary shrink-0 hidden sm:block" />
               <div>
-                <p className="text-xs text-muted-foreground">Lucro parcial</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground">Lucro</p>
                 {loadingFluxo ? (
-                  <Skeleton className="h-7 w-24" />
+                  <Skeleton className="h-5 sm:h-7 w-16 sm:w-24" />
                 ) : (
-                  <p className="text-lg font-heading font-bold text-primary">
+                  <p className="text-sm sm:text-lg font-heading font-bold text-primary">
                     {formatCurrency(resumoFinanceiro.lucro)}
                   </p>
                 )}
@@ -262,19 +262,19 @@ export default function Dashboard() {
           </div>
 
           {/* Indicadores percentuais */}
-          <div className="flex flex-wrap gap-2 sm:gap-3 pt-1">
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted/80 text-sm">
-              <DollarSign size={14} className="text-destructive" />
-              <span className="text-muted-foreground">Imposto previsto:</span>
-              <span className="font-semibold text-foreground">
+          <div className="grid grid-cols-2 gap-2 pt-1">
+            <div className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1.5 rounded-full bg-muted/80 text-xs sm:text-sm">
+              <DollarSign size={12} className="text-destructive shrink-0" />
+              <span className="text-muted-foreground hidden sm:inline">Imposto:</span>
+              <span className="font-semibold text-foreground truncate">
                 {loadingFluxo
                   ? "..."
                   : formatCurrency(fluxoCaixa?.totalImpostos ?? 6850)}
               </span>
             </div>
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 text-sm">
-              <TrendingUp size={14} className="text-primary" />
-              <span className="text-muted-foreground">Alíquota estimada:</span>
+            <div className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1.5 rounded-full bg-primary/10 text-xs sm:text-sm">
+              <TrendingUp size={12} className="text-primary shrink-0" />
+              <span className="text-muted-foreground hidden sm:inline">Alíquota:</span>
               <span className="font-semibold text-primary">
                 {loadingFluxo
                   ? "..."
@@ -283,9 +283,9 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* Explicação do imposto */}
+          {/* Explicação do imposto - escondida no mobile */}
           {!loadingFluxo && fluxoCaixa && (
-            <div className="pt-3 border-t border-border">
+            <div className="pt-3 border-t border-border hidden sm:block">
               <p className="text-xs text-muted-foreground leading-relaxed">
                 <span className="font-medium text-foreground">💡 De onde vem o imposto previsto?</span>
                 <br />

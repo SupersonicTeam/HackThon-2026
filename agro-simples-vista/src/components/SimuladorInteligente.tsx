@@ -246,12 +246,12 @@ export default function SimuladorInteligente() {
         </CardHeader>
         <CardContent className="space-y-5">
           {/* Filtros */}
-          <div className="flex flex-wrap gap-3">
+          <div className="flex flex-wrap gap-2 sm:gap-3">
             <Select
               value={periodo}
               onValueChange={(v) => setPeriodo(v as Periodo)}
             >
-              <SelectTrigger className="w-[160px]">
+              <SelectTrigger className="w-[130px] sm:w-[160px] text-xs sm:text-sm">
                 <SelectValue placeholder="Período" />
               </SelectTrigger>
               <SelectContent>
@@ -263,7 +263,7 @@ export default function SimuladorInteligente() {
               </SelectContent>
             </Select>
             <Select value={tipo} onValueChange={(v) => setTipo(v as Tipo)}>
-              <SelectTrigger className="w-[140px]">
+              <SelectTrigger className="w-[100px] sm:w-[140px] text-xs sm:text-sm">
                 <SelectValue placeholder="Tipo" />
               </SelectTrigger>
               <SelectContent>
@@ -373,15 +373,15 @@ export default function SimuladorInteligente() {
           <div className="flex gap-2">
             <Button
               variant="outline"
-              className="flex-1"
+              className="flex-1 text-xs sm:text-sm px-2 sm:px-4"
               onClick={() => setDetailOpen(true)}
             >
-              <FileText size={16} className="mr-2" />
-              Ver detalhamento
+              <FileText size={16} className="mr-1 sm:mr-2" />
+              <span className="hidden sm:inline">Ver </span>Detalhes
             </Button>
-            <Button className="flex-1" onClick={() => setSimOpen(true)}>
-              <Calculator size={16} className="mr-2" />
-              Abrir simulador
+            <Button className="flex-1 text-xs sm:text-sm px-2 sm:px-4" onClick={() => setSimOpen(true)}>
+              <Calculator size={16} className="mr-1 sm:mr-2" />
+              Simulador
             </Button>
           </div>
         </CardContent>

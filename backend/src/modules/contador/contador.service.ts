@@ -1,17 +1,21 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreatePendenciaDto } from './dto/create-pendencia.dto';
 import { UpdatePendenciaDto } from './dto/update-pendencia.dto';
 import { AnexarDocumentoDto } from './dto/anexar-documento.dto';
 import { ContadorOcrService } from './contador-ocr.service';
+import { WhatsappService } from '../whatsapp/whatsapp.service';
 
 type AgendaStatus = 'aberto' | 'concluido' | 'cancelado';
 
 @Injectable()
 export class ContadorService {
+  private readonly logger = new Logger(ContadorService.name);
+
   constructor(
     private prisma: PrismaService,
     private ocrService: ContadorOcrService,
+    private whatsapp: WhatsappService,
   ) {}
 
   private async upsertAgendaFromPendencia(p: {
@@ -119,6 +123,7 @@ export class ContadorService {
     const pendencia = await this.prisma.pendenciaContador.update({
       where: { id },
       data: { status: 'concluida', dataAtendimento: new Date() },
+      include: { produtor: true },
     });
 
     await this.upsertAgendaFromPendencia({
@@ -129,6 +134,29 @@ export class ContadorService {
       dataLimite: pendencia.dataLimite,
       agendaStatus: 'concluido',
     });
+
+    // Enviar notificação via WhatsApp
+    if (pendencia.produtor?.telefone) {
+      const mensagem = `✅ *AgroTributos - Documento Aprovado*
+
+Olá ${pendencia.produtor.nome}!
+
+Seu documento foi analisado e aprovado com sucesso:
+
+📄 *Solicitação:* ${pendencia.titulo}
+📅 *Concluído em:* ${new Date().toLocaleDateString('pt-BR')}
+
+Obrigado por enviar a documentação!
+
+_Acesse o sistema para mais detalhes._`;
+
+      try {
+        await this.whatsapp.sendText(pendencia.produtor.telefone, mensagem);
+        this.logger.log(`✅ Notificação de aprovação enviada para ${pendencia.produtor.telefone}`);
+      } catch (error) {
+        this.logger.error(`Erro ao enviar notificação WhatsApp: ${error.message}`);
+      }
+    }
 
     return pendencia;
   }
@@ -187,6 +215,7 @@ export class ContadorService {
     const pendencia = await this.prisma.pendenciaContador.update({
       where: { id },
       data: { status: 'pendente', motivoRejeicao: motivo },
+      include: { produtor: true },
     });
 
     await this.upsertAgendaFromPendencia({
@@ -197,6 +226,30 @@ export class ContadorService {
       dataLimite: pendencia.dataLimite,
       agendaStatus: 'aberto',
     });
+
+    // Enviar notificação via WhatsApp
+    if (pendencia.produtor?.telefone) {
+      const mensagem = `🚫 *AgroTributos - Documento Rejeitado*
+
+Olá ${pendencia.produtor.nome}!
+
+Seu documento foi analisado e precisa de correções:
+
+📄 *Solicitação:* ${pendencia.titulo}
+❌ *Motivo da rejeição:* ${motivo}
+📅 *Prazo:* ${new Date(pendencia.dataLimite).toLocaleDateString('pt-BR')}
+
+Por favor, verifique o documento e envie novamente.
+
+_Acesse o sistema para mais detalhes._`;
+
+      try {
+        await this.whatsapp.sendText(pendencia.produtor.telefone, mensagem);
+        this.logger.log(`✅ Notificação de rejeição enviada para ${pendencia.produtor.telefone}`);
+      } catch (error) {
+        this.logger.error(`Erro ao enviar notificação WhatsApp: ${error.message}`);
+      }
+    }
 
     return pendencia;
   }

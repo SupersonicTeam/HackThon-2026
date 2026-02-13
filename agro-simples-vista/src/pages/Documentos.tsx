@@ -300,9 +300,9 @@ export default function Documentos() {
       </div>
 
       {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-3 flex-wrap">
+      <div className="grid grid-cols-2 sm:flex sm:flex-row gap-2 sm:gap-3 sm:flex-wrap">
         <Select value={periodo} onValueChange={setPeriodo}>
-          <SelectTrigger className="sm:w-40">
+          <SelectTrigger className="text-xs sm:text-sm sm:w-40">
             <SelectValue placeholder="Período" />
           </SelectTrigger>
           <SelectContent>
@@ -315,7 +315,7 @@ export default function Documentos() {
         </Select>
 
         <Select value={tipo} onValueChange={setTipo}>
-          <SelectTrigger className="sm:w-36">
+          <SelectTrigger className="text-xs sm:text-sm sm:w-36">
             <SelectValue placeholder="Tipo" />
           </SelectTrigger>
           <SelectContent>
@@ -326,7 +326,7 @@ export default function Documentos() {
         </Select>
 
         <Select value={grupo} onValueChange={setGrupo}>
-          <SelectTrigger className="sm:w-44">
+          <SelectTrigger className="text-xs sm:text-sm sm:w-44">
             <SelectValue placeholder="Grupo" />
           </SelectTrigger>
           <SelectContent>
@@ -338,7 +338,7 @@ export default function Documentos() {
         </Select>
 
         <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="sm:w-36">
+          <SelectTrigger className="text-xs sm:text-sm sm:w-36">
             <SelectValue placeholder="Status" />
           </SelectTrigger>
           <SelectContent>
