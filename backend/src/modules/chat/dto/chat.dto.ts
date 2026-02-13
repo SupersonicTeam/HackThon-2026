@@ -18,6 +18,8 @@ export class ChatMessageDto {
   })
   @IsOptional()
   context?: {
+    produtorId?: string;
+    cpfCnpj?: string;
     regimeTributario?: string;
     culturas?: string[];
     estado?: string;

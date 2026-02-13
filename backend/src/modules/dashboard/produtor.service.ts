@@ -52,6 +52,32 @@ export class ProdutorService {
     return produtor;
   }
 
+  async findByCpfCnpj(cpfCnpj: string) {
+    const produtor = await this.prisma.produtor.findUnique({
+      where: { cpfCnpj },
+      include: {
+        notas: {
+          orderBy: { dataEmissao: 'desc' },
+          take: 10,
+        },
+        impostos: {
+          orderBy: {
+            anoReferencia: 'desc',
+          },
+          take: 12,
+        },
+      },
+    });
+
+    if (!produtor) {
+      throw new NotFoundException(
+        `Produtor com CPF/CNPJ ${cpfCnpj} não encontrado`,
+      );
+    }
+
+    return produtor;
+  }
+
   async update(id: string, data: Partial<CreateProdutorDto>) {
     const produtor = await this.findOne(id);
 

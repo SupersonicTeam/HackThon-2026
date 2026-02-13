@@ -116,9 +116,94 @@ Seja o parceiro de confiança que todo produtor precisa!`;
     try {
       const messages: ChatMessage[] = [
         { role: 'system', content: this.getSystemPrompt() },
-        ...(context?.history || []),
-        { role: 'user', content: message },
       ];
+
+      // Adiciona informações do produtor e suas notas ao contexto se disponível
+      if (context?.produtor || context?.notas) {
+        let contextInfo = '\n\n**DADOS DO PRODUTOR NO SISTEMA:**\n\n';
+
+        if (context.produtor) {
+          contextInfo += `Nome: ${context.produtor.nome}\n`;
+          contextInfo += `CPF/CNPJ: ${context.produtor.cpfCnpj}\n`;
+          contextInfo += `Regime: ${context.produtor.regime}\n`;
+          if (context.produtor.estado) {
+            contextInfo += `Estado: ${context.produtor.estado}\n`;
+          }
+          if (context.produtor.culturas) {
+            const culturas =
+              typeof context.produtor.culturas === 'string'
+                ? JSON.parse(context.produtor.culturas)
+                : context.produtor.culturas;
+            contextInfo += `Culturas: ${Array.isArray(culturas) ? culturas.join(', ') : culturas}\n`;
+          }
+        }
+
+        if (context.notas && context.notas.length > 0) {
+          contextInfo += `\n**NOTAS FISCAIS CADASTRADAS (${context.totalNotas} total):**\n\n`;
+
+          const notasParaMostrar =
+            context.notasRecentes || context.notas.slice(0, 5);
+          notasParaMostrar.forEach((nota: any, index: number) => {
+            contextInfo += `Nota ${index + 1}:\n`;
+            contextInfo += `  - Chave: ${nota.chaveAcesso}\n`;
+            contextInfo += `  - Tipo: ${nota.tipo === 'entrada' ? 'Compra/Entrada' : 'Venda/Saída'}\n`;
+            contextInfo += `  - Número: ${nota.numero} / Série: ${nota.serie}\n`;
+            contextInfo += `  - Data: ${new Date(nota.dataEmissao).toLocaleDateString('pt-BR')}\n`;
+            contextInfo += `  - Valor Total: R$ ${Number(nota.valorTotal).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`;
+            contextInfo += `  - CFOP: ${nota.cfop || 'N/A'}\n`;
+            contextInfo += `  - Emitente: ${nota.nomeEmitente || 'N/A'}\n`;
+
+            if (nota.itens && nota.itens.length > 0) {
+              contextInfo += `  - Produtos (${nota.itens.length} itens):\n`;
+              nota.itens.slice(0, 3).forEach((item: any) => {
+                contextInfo += `    * ${item.descricao} - ${item.quantidade} ${item.unidade || 'UN'} × R$ ${Number(item.valorUnitario).toFixed(2)} = R$ ${Number(item.valorTotal).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`;
+              });
+              if (nota.itens.length > 3) {
+                contextInfo += `    ... e mais ${nota.itens.length - 3} produtos\n`;
+              }
+            }
+
+            // Impostos da nota
+            const impostos = [];
+            if (nota.valorCbs)
+              impostos.push(`CBS: R$ ${Number(nota.valorCbs).toFixed(2)}`);
+            if (nota.valorIbs)
+              impostos.push(`IBS: R$ ${Number(nota.valorIbs).toFixed(2)}`);
+            if (nota.valorFunrural)
+              impostos.push(
+                `FUNRURAL: R$ ${Number(nota.valorFunrural).toFixed(2)}`,
+              );
+            if (nota.valorIcms)
+              impostos.push(`ICMS: R$ ${Number(nota.valorIcms).toFixed(2)}`);
+            if (impostos.length > 0) {
+              contextInfo += `  - Impostos: ${impostos.join(', ')}\n`;
+            }
+
+            contextInfo += `  - Status: ${nota.status}\n`;
+            if (nota.observacoes) {
+              contextInfo += `  - Obs: ${nota.observacoes}\n`;
+            }
+            contextInfo += '\n';
+          });
+
+          if (context.totalNotas > notasParaMostrar.length) {
+            contextInfo += `... e mais ${context.totalNotas - notasParaMostrar.length} notas no sistema.\n`;
+          }
+        } else if (context.produtor) {
+          contextInfo +=
+            '\n**Ainda não há notas fiscais cadastradas para este produtor.**\n';
+        }
+
+        messages.push({
+          role: 'system',
+          content:
+            contextInfo +
+            '\n\nUse essas informações reais do sistema quando o produtor perguntar sobre suas notas, impostos pagos, ou produtos. Seja específico e cite os dados cadastrados.',
+        });
+      }
+
+      messages.push(...(context?.history || []));
+      messages.push({ role: 'user', content: message });
 
       const response = await this.client.chat.completions.create({
         model: this.model,
