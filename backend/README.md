@@ -23,6 +23,15 @@ API desenvolvida com NestJS que fornece um assistente de IA especializado em tri
 - ✅ **Calcular imposto por produto** - Análise detalhada por cultura
 - ✅ **Simulação de preço para melhor lucro** - Preço ideal considerando impostos e margem
 
+#### 📊 Dashboard de Gerenciamento Financeiro
+
+- ✅ **Cadastro de produtores** - Gestão completa de dados do produtor
+- ✅ **Registro de notas fiscais** - Upload e armazenamento de notas (entrada/saída)
+- ✅ **Fluxo de caixa** - Controle de entradas, saídas, saldo e impostos
+- ✅ **Analytics financeiro** - Top produtos, evolução mensal, impostos por tipo
+- ✅ **Banco de dados PostgreSQL** - Armazenamento persistente com Prisma ORM
+- ✅ **Filtros inteligentes** - Consultas por período (ano, mês, datas)
+
 ## 🚀 Início Rápido
 
 ### Pré-requisitos
@@ -205,21 +214,135 @@ Content-Type: application/json
 - ⚠️ Prevenção de erros comuns
 - ✅ Plano de ação com potencial de ganho
 
+---
+
+## 📊 Módulo Dashboard (Gerenciamento Financeiro)
+
+O **Dashboard** é um módulo completo para gerenciamento financeiro do produtor rural com Prisma ORM e PostgreSQL.
+
+### ⚙️ Configuração do Banco de Dados
+
+#### 1. Instalar PostgreSQL
+
+Certifique-se de ter o PostgreSQL instalado e rodando:
+
+```bash
+# Windows (com Chocolatey)
+choco install postgresql
+
+# Linux (Ubuntu/Debian)
+sudo apt-get install postgresql
+
+# macOS (com Homebrew)
+brew install postgresql
+```
+
+#### 2. Criar Banco de Dados
+
+```sql
+CREATE DATABASE agrotributos;
+```
+
+#### 3. Configurar Connection String
+
+No arquivo `.env`, configure:
+
+```env
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/agrotributos"
+```
+
+#### 4. Executar Migrations
+
+```bash
+# Cria as tabelas no banco de dados
+npx prisma migrate dev --name init
+
+# (Opcional) Visualizar dados com Prisma Studio
+npx prisma studio
+```
+
+### 🎯 Funcionalidades do Dashboard
+
+#### ✅ Gerenciamento de Produtores
+
+- Cadastro completo (nome, CPF/CNPJ, regime tributário, culturas)
+- Listagem com estatísticas (notas, impostos)
+- Atualização de dados
+- Remoção com cascade (notas e impostos)
+
+#### ✅ Gerenciamento de Notas Fiscais
+
+- Upload de notas (foto ou PDF) - campos preparados
+- Registro automático de entradas/saídas
+- Filtros por período (ano, mês, data inicial/final)
+- Validação automática de dados
+- Cálculo e armazenamento de impostos (CBS, IBS, FUNRURAL)
+
+#### ✅ Analytics e Relatórios
+
+- **Fluxo de Caixa**: Entradas, saídas, saldo, impostos, lucro estimado
+- **Top 5 Produtos**: Ranking por faturamento
+- **Impostos por Tipo**: Detalhamento CBS, IBS, FUNRURAL
+- **Evolução Mensal**: Análise mês a mês do ano
+- **Notas Pendentes**: Contagem de notas aguardando validação
+
+### 📝 Endpoints do Dashboard
+
+```http
+# Criar produtor
+POST /api/dashboard/produtores
+
+# Listar produtores
+GET /api/dashboard/produtores
+
+# Criar nota fiscal
+POST /api/dashboard/notas
+
+# Listar notas (com filtros)
+GET /api/dashboard/notas?produtorId=uuid&ano=2026&mes=2
+
+# Obter resumo completo do dashboard
+GET /api/dashboard/:produtorId/resumo?ano=2026&mes=2
+
+# Obter fluxo de caixa
+GET /api/dashboard/:produtorId/fluxo-caixa?ano=2026
+
+# Obter evolução mensal
+GET /api/dashboard/:produtorId/evolucao/2026
+```
+
+**📄 Documentação completa:** [Dashboard README](src/modules/dashboard/README.md)
+
+---
+
 ## 🏗️ Estrutura do Projeto
 
 ```
 backend/
 ├── src/
 │   ├── modules/
-│   │   └── chat/          # Módulo do assistente IA
-│   │       ├── ai.service.ts      # Integração OpenAI + Lógica IA
-│   │       ├── chat.service.ts    # Orquestração
-│   │       ├── chat.controller.ts # 6 endpoints REST
-│   │       └── dto/               # DTOs com validação
-│   ├── app.module.ts      # Módulo raiz
-│   └── main.ts            # Bootstrap + Swagger
-├── .env                   # Variáveis de ambiente (não commitar)
-├── .env.example           # Template de configuração
+│   │   ├── chat/              # Módulo do assistente IA
+│   │   │   ├── ai.service.ts      # Integração OpenAI + Lógica IA
+│   │   │   ├── chat.service.ts    # Orquestração
+│   │   │   ├── chat.controller.ts # 6 endpoints REST
+│   │   │   └── dto/               # DTOs com validação
+│   │   └── dashboard/         # Módulo de gerenciamento financeiro
+│   │       ├── dashboard.service.ts    # Analytics e agregações
+│   │       ├── produtor.service.ts     # CRUD produtores
+│   │       ├── nota-fiscal.service.ts  # CRUD notas fiscais
+│   │       ├── dashboard.controller.ts # Endpoints REST
+│   │       ├── dashboard.module.ts     # Módulo Dashboard
+│   │       ├── dto/                    # DTOs com validação
+│   │       └── README.md               # Documentação completa
+│   ├── prisma/                # Módulo Prisma ORM
+│   │   ├── prisma.service.ts      # PrismaClient wrapper
+│   │   └── prisma.module.ts       # Módulo global
+│   ├── app.module.ts          # Módulo raiz
+│   └── main.ts                # Bootstrap + Swagger
+├── prisma/
+│   └── schema.prisma          # Schema do banco de dados
+├── .env                       # Variáveis de ambiente (não commitar)
+├── .env.example               # Template de configuração
 └── package.json
 ```
 
@@ -259,22 +382,30 @@ npm run format         # Formata código com Prettier
 
 - **Framework**: [NestJS](https://nestjs.com/) v10
 - **IA**: [OpenAI GPT-4](https://openai.com/) (gpt-4o-mini)
+- **Database ORM**: [Prisma](https://www.prisma.io/) v7 (PostgreSQL)
 - **Validação**: class-validator + class-transformer
 - **Documentação**: Swagger/OpenAPI 3.0
 - **TypeScript**: Tipagem estática completa
+- **Banco de Dados**: PostgreSQL
 
 ## 📊 Comparativo: Antes x Agora
 
-| Funcionalidade         | Antes | Agora |
-| ---------------------- | ----- | ----- |
-| Chat básico            | ✅    | ✅    |
-| Cálculo de impostos    | ✅    | ✅    |
-| Análise de notas       | ❌    | ✅    |
-| Validação de erros     | ❌    | ✅    |
-| Simulação de preços    | ❌    | ✅    |
-| Dicas de lucro         | ❌    | ✅    |
-| Prevenção de problemas | ❌    | ✅    |
-| Usa dados do usuário   | ❌    | ✅    |
+| Funcionalidade               | Antes | Agora |
+| ---------------------------- | ----- | ----- |
+| Chat básico                  | ✅    | ✅    |
+| Cálculo de impostos          | ✅    | ✅    |
+| Análise de notas             | ❌    | ✅    |
+| Validação de erros           | ❌    | ✅    |
+| Simulação de preços          | ❌    | ✅    |
+| Dicas de lucro               | ❌    | ✅    |
+| Prevenção de problemas       | ❌    | ✅    |
+| Usa dados do usuário         | ❌    | ✅    |
+| **Gerenciamento financeiro** | ❌    | ✅    |
+| **Banco de dados (Prisma)**  | ❌    | ✅    |
+| **Dashboard analytics**      | ❌    | ✅    |
+| **CRUD produtores/notas**    | ❌    | ✅    |
+| **Fluxo de caixa**           | ❌    | ✅    |
+| **Relatórios mensais**       | ❌    | ✅    |
 
 ## 🎯 Cobertura do README do Projeto
 
@@ -292,11 +423,14 @@ Todas as funcionalidades do "Assistente IA Personalizado" e "Calculadora de Impo
 
 ## 📝 Próximos Passos
 
-- [ ] Integração com Supabase (banco de dados)
-- [ ] Upload e OCR de notas fiscais (foto/PDF)
+- [ ] Implementar upload de arquivos com Multer (campos já preparados)
+- [ ] Integração com OCR para leitura automática de notas fiscais
 - [ ] Calendário fiscal com notificações
+- [ ] Autenticação e autorização (JWT)
 - [ ] Módulo para contadores
 - [ ] Integração WhatsApp
+- [ ] Exportação de relatórios em PDF/Excel
+- [ ] Dashboard em tempo real com WebSockets
 
 ## 📝 Licença
 

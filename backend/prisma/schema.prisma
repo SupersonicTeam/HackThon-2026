@@ -1,0 +1,193 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==========================================
+// PRODUTOR - Dados do produtor rural
+// ==========================================
+model Produtor {
+  id        String   @id @default(uuid())
+  nome      String
+  cpfCnpj   String   @unique
+  email     String?
+  telefone  String?
+  estado    String?
+  cidade    String?
+  
+  // Dados tributários
+  regime    String   // MEI, Simples, Lucro Presumido, Lucro Real
+  culturas  String   // JSON array de culturas (Soja, Milho, etc)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relacionamentos
+  notas     NotaFiscal[]
+  impostos  ImpostoCalculado[]
+  
+  @@map("produtores")
+}
+
+// ==========================================
+// NOTA FISCAL - Upload e dados de notas
+// ==========================================
+model NotaFiscal {
+  id              String   @id @default(uuid())
+  produtorId      String
+  
+  // Identificação da nota
+  chaveAcesso     String   @unique // 44 dígitos - chave de acesso da NF-e
+  tipo            String   // "entrada" ou "saida"
+  numero          String?
+  serie           String?
+  
+  // Dados fiscais
+  cfop            String?  // Código Fiscal de Operação
+  naturezaOperacao String? // Ex: "Venda de mercadoria"
+  
+  // Destinatário/Remetente
+  nomeEmitente    String?
+  cpfCnpjEmitente String?
+  destino         String?  // estado de destino
+  exportacao      Boolean  @default(false)
+  
+  // Valores totais da nota
+  valorTotal      Float
+  valorProdutos   Float?   // Subtotal dos produtos
+  valorFrete      Float?
+  valorSeguro     Float?
+  valorDesconto   Float?
+  valorOutros     Float?
+  
+  // Impostos totais
+  valorCbs        Float?
+  valorIbs        Float?
+  valorFunrural   Float?
+  valorIcms       Float?
+  valorIpi        Float?
+  
+  // Arquivo
+  arquivoUrl      String?  // URL do arquivo (foto ou PDF)
+  arquivoTipo     String?  // "foto" ou "pdf"
+  
+  // Status
+  status          String   @default("pendente") // pendente, validada, erro
+  observacoes     String?
+  
+  dataEmissao     DateTime
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  // Relacionamentos
+  produtor        Produtor @relation(fields: [produtorId], references: [id], onDelete: Cascade)
+  itens           ItemNotaFiscal[]
+  
+  @@map("notas_fiscais")
+  @@index([produtorId])
+  @@index([tipo])
+  @@index([dataEmissao])
+  @@index([chaveAcesso])
+}
+
+// ==========================================
+// ITEM NOTA FISCAL - Produtos/serviços da nota
+// ==========================================
+model ItemNotaFiscal {
+  id              String  @id @default(uuid())
+  notaFiscalId    String
+  
+  // Identificação do item
+  numeroItem      Int
+  codigoProduto   String?
+  descricao       String
+  ncm             String?  // Nomenclatura Comum do Mercosul
+  cfop            String?  // CFOP do item
+  
+  // Quantidades e valores
+  unidade         String?  // kg, ton, sc, L, etc
+  quantidade      Float
+  valorUnitario   Float
+  valorTotal      Float
+  valorDesconto   Float?
+  valorFrete      Float?
+  
+  // Impostos do item
+  baseCalculoIcms Float?
+  valorIcms       Float?
+  aliquotaIcms    Float?
+  
+  baseCalculoIpi  Float?
+  valorIpi        Float?
+  aliquotaIpi     Float?
+  
+  valorCbs        Float?
+  valorIbs        Float?
+  valorFunrural   Float?
+  
+  // Informações adicionais
+  informacoes     String?
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  // Relacionamento
+  notaFiscal      NotaFiscal @relation(fields: [notaFiscalId], references: [id], onDelete: Cascade)
+  
+  @@map("itens_nota_fiscal")
+  @@index([notaFiscalId])
+  @@index([numeroItem])
+}
+
+// ==========================================
+// IMPOSTO CALCULADO - Histórico de cálculos
+// ==========================================
+model ImpostoCalculado {
+  id            String   @id @default(uuid())
+  produtorId    String
+  
+  // Período
+  mesReferencia Int      // 1-12
+  anoReferencia Int      // 2026
+  
+  // Valores calculados
+  faturamento   Float
+  custos        Float?
+  lucro         Float?
+  
+  // Impostos
+  cbs           Float
+  ibs           Float
+  funrural      Float
+  outrosImpostos Float?
+  totalImpostos Float
+  
+  // Regime usado
+  regime        String
+  
+  // Detalhes
+  detalhes      String?  // JSON com breakdown detalhado
+  
+  createdAt     DateTime @default(now())
+  
+  // Relacionamento
+  produtor      Produtor @relation(fields: [produtorId], references: [id], onDelete: Cascade)
+  
+  @@map("impostos_calculados")
+  @@index([produtorId])
+  @@index([anoReferencia, mesReferencia])
+}
+
+// ==========================================
+// FLUXO DE CAIXA - Agregado automático
+// ==========================================
+// Será calculado dinamicamente das notas fiscais
+// Não precisa de tabela separada - view/query agregada
+
