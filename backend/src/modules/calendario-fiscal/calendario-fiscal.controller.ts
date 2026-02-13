@@ -12,7 +12,7 @@ import {
 } from './calendario-fiscal.dto';
 
 @ApiTags('Calendário Fiscal')
-@Controller('api/calendario-fiscal')
+@Controller('calendario-fiscal')
 export class CalendarioFiscalController {
   constructor(
     private readonly calendarioFiscalService: CalendarioFiscalService,

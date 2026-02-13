@@ -10,6 +10,8 @@ import {
   AlertCircle,
   Plus,
   CreditCard,
+  MessageCircle,
+  Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { LOGGED_PRODUCER_ID } from "@/mocks/producers";
@@ -17,6 +19,8 @@ import AnexarDocumentoDialog from "@/components/AnexarDocumentoDialog";
 import { useVencimentos } from "@/hooks/use-calendario";
 import { useNotas } from "@/hooks/use-dashboard";
 import { useContador } from "@/hooks/use-contador";
+import { useNotificarProximasObrigacoes } from "@/services/notificacao.service";
+import { toast } from "sonner";
 
 const WEEKDAYS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 const MONTH_NAMES = [
@@ -84,6 +88,25 @@ export default function Calendario() {
   const { data: notasApi, isLoading: loadingNotas } =
     useNotas(LOGGED_PRODUCER_ID);
 
+  // Hook para notificar via WhatsApp
+  const { mutate: notificarWhatsApp, isPending: enviandoNotificacao } =
+    useNotificarProximasObrigacoes();
+
+  const handleNotificarWhatsApp = () => {
+    notificarWhatsApp(LOGGED_PRODUCER_ID, {
+      onSuccess: (data) => {
+        if (data.enviados > 0) {
+          toast.success(`✅ ${data.enviados} notificação(ões) enviada(s) via WhatsApp!`);
+        } else {
+          toast.info("Nenhuma obrigação pendente para notificar.");
+        }
+      },
+      onError: () => {
+        toast.error("Erro ao enviar notificações");
+      },
+    });
+  };
+
   // Load pendências on mount
   useEffect(() => {
     listar(LOGGED_PRODUCER_ID).catch(() => {});
@@ -137,12 +160,13 @@ export default function Calendario() {
     return pendencias
       .filter((p) => p.produtorId === LOGGED_PRODUCER_ID && p.dataLimite?.slice(0, 10) === dateKey)
       .map((p) => {
-        const status =
-          p.status === "concluida"
-            ? "concluido"
-            : p.status === "cancelada"
-            ? "cancelado"
-            : "pendente";
+        // Mapear status do backend para frontend
+        let status: "pendente" | "enviado" | "concluido" | "cancelado" | "recebido" | "rejeitado" = "pendente";
+        if (p.status === "concluida") status = "concluido";
+        else if (p.status === "cancelada") status = "cancelado";
+        else if (p.status === "enviado") status = "enviado";
+        else if (p.status === "pendente" && p.motivoRejeicao) status = "rejeitado"; // Foi rejeitado
+        else if (p.status === "pendente") status = "pendente";
         
         // Parse tiposDocumentos com fallback
         let categoria = "Documento";
@@ -163,7 +187,7 @@ export default function Calendario() {
           categoria,
           mesReferencia: "",
           prioridade: p.prioridade as "alta" | "media" | "baixa",
-          status: status as "pendente" | "enviado" | "recebido" | "rejeitado" | "concluido" | "cancelado",
+          status,
           prazo: p.dataLimite?.slice(0, 10) || "",
           observacao: p.observacoes ?? undefined,
           motivoRejeicao: p.motivoRejeicao ?? undefined,
@@ -197,11 +221,27 @@ export default function Calendario() {
   return (
     <div className="space-y-5">
       {/* Header */}
-      <div className="flex items-center gap-3">
-        <CalIcon className="text-primary" size={28} />
-        <h1 className="text-2xl md:text-3xl font-heading font-bold">
-          Calendário
-        </h1>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <CalIcon className="text-primary" size={28} />
+          <h1 className="text-2xl md:text-3xl font-heading font-bold">
+            Calendário
+          </h1>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          className="gap-2 text-green-600 border-green-200 hover:bg-green-50"
+          onClick={handleNotificarWhatsApp}
+          disabled={enviandoNotificacao}
+        >
+          {enviandoNotificacao ? (
+            <Loader2 size={16} className="animate-spin" />
+          ) : (
+            <MessageCircle size={16} />
+          )}
+          <span className="hidden sm:inline">Notificar Obrigações</span>
+        </Button>
       </div>
 
       {/* 2-col layout */}
@@ -363,6 +403,7 @@ export default function Calendario() {
                     s.status === "concluido" || s.status === "recebido";
                   const isEncaminhado = s.status === "enviado";
                   const isCancelado = s.status === "cancelado";
+                  const isRejeitado = s.status === "rejeitado";
                   return (
                     <li
                       key={s.id}
@@ -399,18 +440,22 @@ export default function Calendario() {
                                   ? "bg-emerald-500/15 text-emerald-700 border-emerald-300 hover:bg-emerald-500/15"
                                   : isCancelado
                                     ? "bg-red-500/15 text-red-700 border-red-300 hover:bg-red-500/15"
-                                    : isEncaminhado
-                                      ? "bg-amber-500/15 text-amber-700 border-amber-300 hover:bg-amber-500/15"
-                                      : "bg-amber-500/15 text-amber-700 border-amber-300 hover:bg-amber-500/15",
+                                    : isRejeitado
+                                      ? "bg-red-500/15 text-red-700 border-red-300 hover:bg-red-500/15"
+                                      : isEncaminhado
+                                        ? "bg-amber-500/15 text-amber-700 border-amber-300 hover:bg-amber-500/15"
+                                        : "bg-amber-500/15 text-amber-700 border-amber-300 hover:bg-amber-500/15",
                               )}
                             >
                               {isConcluido
                                 ? "Concluído"
                                 : isCancelado
                                   ? "Cancelado"
-                                  : isEncaminhado
-                                    ? "Encaminhado"
-                                    : "Pendente"}
+                                  : isRejeitado
+                                    ? "Rejeitado"
+                                    : isEncaminhado
+                                      ? "Encaminhado"
+                                      : "Pendente"}
                             </Badge>
                           </div>
                           {s.prazo && (
@@ -418,8 +463,18 @@ export default function Calendario() {
                               Vencimento: {formatDateBR(s.prazo)}
                             </p>
                           )}
+                          {isRejeitado && s.motivoRejeicao && (
+                            <div className="mt-2 p-2 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded">
+                              <p className="text-[11px] font-medium text-red-700 dark:text-red-400">
+                                Motivo da rejeição:
+                              </p>
+                              <p className="text-[11px] text-red-600 dark:text-red-400 mt-0.5">
+                                {s.motivoRejeicao}
+                              </p>
+                            </div>
+                          )}
                         </div>
-                        {!isConcluido && !isCancelado && !isEncaminhado && (
+                        {!isConcluido && !isCancelado && !isRejeitado && (
                           <Button
                             size="sm"
                             variant="outline"
@@ -430,7 +485,7 @@ export default function Calendario() {
                             }}
                           >
                             <Plus size={14} className="mr-1" />
-                            Anexar
+                            {isEncaminhado ? "Adicionar doc" : "Anexar"}
                           </Button>
                         )}
                       </div>

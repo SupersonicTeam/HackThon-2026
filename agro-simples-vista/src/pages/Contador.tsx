@@ -48,6 +48,7 @@ import DocsOficiaisTab from "@/components/DocsOficiaisTab";
 import ResumoPagamento from "@/components/ResumoPagamento";
 import ConferirDadosDialog from "@/components/ConferirDadosDialog";
 import RascunhosContadorTab from "@/components/RascunhosContadorTab";
+import { useNotificacoes } from "@/contexts/NotificacoesContext";
 
 function formatDate(iso: string) {
   return new Date(iso + "T12:00:00").toLocaleDateString("pt-BR");
@@ -66,6 +67,7 @@ const statusBadge = (s: string) => {
   if (s === "concluido") return <Badge className="bg-primary/15 text-primary border-0 text-[10px]"><CheckCircle size={10} className="mr-1" />Concluído</Badge>;
   if (s === "cancelado") return <Badge variant="destructive" className="text-[10px]"><Ban size={10} className="mr-1" />Cancelado</Badge>;
   if (s === "recebido") return <Badge className="bg-primary/15 text-primary border-0 text-[10px]"><CheckCircle size={10} className="mr-1" />Recebido</Badge>;
+  if (s === "rejeitado") return <Badge variant="destructive" className="text-[10px]"><XCircle size={10} className="mr-1" />Rejeitado</Badge>;
   return <Badge variant="destructive" className="text-[10px]"><XCircle size={10} className="mr-1" />Rejeitado</Badge>;
 };
 
@@ -129,7 +131,9 @@ export default function Contador() {
     cancelar,
     reabrir,
     rejeitar,
+    listarDocumentos,
   } = useContador();
+  const { adicionarNotificacao } = useNotificacoes();
   const [selectedProducerId, setSelectedProducerId] = useState(produtores[0].id);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [rejectId, setRejectId] = useState<string | null>(null);
@@ -139,6 +143,8 @@ export default function Contador() {
   const [editingSolicitacao, setEditingSolicitacao] = useState<SolicitacaoUi | null>(null);
   const [viewEnvioId, setViewEnvioId] = useState<string | null>(null);
   const [viewDocId, setViewDocId] = useState<string | null>(null);
+  const [viewDocumentos, setViewDocumentos] = useState<any[]>([]);
+  const [loadingViewDocs, setLoadingViewDocs] = useState(false);
   const [conferirId, setConferirId] = useState<string | null>(null);
   const [resumoSolId, setResumoSolId] = useState<string | null>(null);
 
@@ -155,12 +161,14 @@ export default function Contador() {
   const solicitacoes = useMemo<SolicitacaoUi[]>(() => {
     return pendencias.map((p) => {
       const { categoria, mesReferencia } = decodeCategoriaMes(p.tiposDocumentos);
-      const status =
-        p.status === "concluida"
-          ? "concluido"
-          : p.status === "cancelada"
-          ? "cancelado"
-          : "pendente";
+      // Mapear status do backend para frontend
+      let status: SolicitacaoUi["status"] = "pendente";
+      if (p.status === "concluida") status = "concluido";
+      else if (p.status === "cancelada") status = "cancelado";
+      else if (p.status === "enviado") status = "enviado";
+      else if (p.status === "pendente" && p.motivoRejeicao) status = "rejeitado"; // Foi rejeitado
+      else if (p.status === "pendente") status = "pendente";
+      
       return {
         id: p.id,
         producerId: p.produtorId,
@@ -233,7 +241,18 @@ export default function Contador() {
   const handleReject = async () => {
     if (rejectId === null || !rejectMotivo.trim()) return;
     try {
+      const sol = solicitacoes.find((s) => s.id === rejectId);
       await rejeitar(rejectId, rejectMotivo);
+      
+      // Adicionar notificação para o produtor
+      if (sol) {
+        adicionarNotificacao({
+          tipo: "Documento",
+          titulo: `❌ Documento rejeitado: ${sol.titulo}`,
+          rota: "/calendario",
+        });
+      }
+      
       setRejectId(null);
       setRejectMotivo("");
       toast.success("Solicitação rejeitada");
@@ -259,6 +278,19 @@ export default function Contador() {
       toast.error("Falha ao carregar solicitações");
     });
   }, [listar, selectedProducerId]);
+
+  // Load documents when viewDocId changes
+  useEffect(() => {
+    if (viewDocId) {
+      setLoadingViewDocs(true);
+      listarDocumentos(viewDocId)
+        .then((docs) => setViewDocumentos(docs))
+        .catch(() => setViewDocumentos([]))
+        .finally(() => setLoadingViewDocs(false));
+    } else {
+      setViewDocumentos([]);
+    }
+  }, [viewDocId, listarDocumentos]);
 
   return (
     <div className="space-y-4 md:space-y-6 max-w-3xl mx-auto">
@@ -581,20 +613,76 @@ export default function Contador() {
 
           {/* View document dialog */}
           <Dialog open={viewDocId !== null} onOpenChange={(v) => { if (!v) setViewDocId(null); }}>
-            <DialogContent className="w-[95vw] max-w-md max-h-[85vh] overflow-y-auto">
+            <DialogContent className="w-[95vw] max-w-2xl max-h-[85vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle className="font-heading">Documento enviado</DialogTitle>
               </DialogHeader>
               {(() => {
                 const sol = solicitacoes.find((s) => s.id === viewDocId);
+                
                 return (
-                  <div className="space-y-3 pt-2 text-sm">
-                    <div><span className="text-muted-foreground">Solicitação:</span> <span className="font-medium">{sol?.titulo}</span></div>
-                    <div><span className="text-muted-foreground">Prioridade:</span> {sol?.prioridade}</div>
-                    {sol?.observacao && (
-                      <div className="text-xs text-muted-foreground">{sol.observacao}</div>
+                  <div className="space-y-4 pt-2">
+                    <div className="text-sm space-y-2">
+                      <div><span className="text-muted-foreground">Solicitação:</span> <span className="font-medium">{sol?.titulo}</span></div>
+                      <div><span className="text-muted-foreground">Prioridade:</span> {sol?.prioridade}</div>
+                      {sol?.observacao && (
+                        <div className="text-xs text-muted-foreground">{sol.observacao}</div>
+                      )}
+                    </div>
+                    
+                    {/* Preview dos documentos anexados */}
+                    {loadingViewDocs ? (
+                      <p className="text-sm text-muted-foreground py-4 text-center">Carregando documentos...</p>
+                    ) : viewDocumentos.length > 0 ? (
+                      <div className="space-y-3">
+                        <h4 className="text-sm font-semibold">Documentos Anexados:</h4>
+                        {viewDocumentos.map((doc: any) => {
+                          const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(doc.nomeArquivo);
+                          const imageUrl = `${import.meta.env.VITE_API_URL || 'http://localhost:3001/api'}/contador/documentos/${doc.id}/download`;
+                          
+                          return (
+                            <div key={doc.id} className="space-y-2">
+                              <p className="text-xs text-muted-foreground flex items-center gap-2">
+                                <FileText size={14} />
+                                {doc.nomeArquivo} ({(doc.tamanho / 1024).toFixed(0)} KB)
+                              </p>
+                              {isImage ? (
+                                <div className="rounded-lg border overflow-hidden bg-muted/20">
+                                  <img 
+                                    src={imageUrl} 
+                                    alt={doc.nomeArquivo}
+                                    className="w-full h-auto max-h-[400px] object-contain"
+                                    onError={(e) => {
+                                      e.currentTarget.style.display = 'none';
+                                      e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                                    }}
+                                  />
+                                  <div className="hidden p-8 text-center text-sm text-muted-foreground">
+                                    <FileText size={48} className="mx-auto mb-2 opacity-50" />
+                                    Não foi possível carregar a imagem
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="rounded-lg border p-8 text-center text-sm text-muted-foreground bg-muted/20">
+                                  <FileText size={48} className="mx-auto mb-2 opacity-50" />
+                                  <p>Preview de PDF não disponível</p>
+                                  <Button 
+                                    size="sm" 
+                                    variant="outline" 
+                                    className="mt-3"
+                                    onClick={() => window.open(imageUrl, '_blank')}
+                                  >
+                                    Baixar documento
+                                  </Button>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground py-4 text-center">Nenhum documento anexado ainda.</p>
                     )}
-                    <p className="text-xs text-muted-foreground">Preview do arquivo indisponível no MVP.</p>
                   </div>
                 );
               })()}

@@ -46,12 +46,21 @@ import GerarRascunhoDialog from "@/components/GerarRascunhoDialog";
 import { toast } from "sonner";
 import {
   useNotas,
+  useNota,
   useRascunhos,
   useEnviarRascunhoContador,
   useFeedbackRascunho,
   useFinalizarRascunho,
+  useGerarNotaDireta,
 } from "@/hooks/use-dashboard";
 import { LOGGED_PRODUCER_ID } from "@/mocks/producers";
+
+// Helper to check if ID is a UUID (API draft) vs numeric (local/mock draft)
+function isUUID(id: string | number): boolean {
+  if (typeof id === 'number') return false;
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(id);
+}
 
 function formatCurrency(v: number) {
   return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -143,6 +152,7 @@ export default function Documentos() {
   const [statusFilter, setStatusFilter] = useState("todos");
   const [busca, setBusca] = useState("");
   const [selected, setSelected] = useState<DocumentoUnificado | null>(null);
+  const [selectedNotaId, setSelectedNotaId] = useState<string | null>(null);
   const [addOpen, setAddOpen] = useState(false);
   const [selectedSolicitacao, setSelectedSolicitacao] = useState("");
 
@@ -157,10 +167,14 @@ export default function Documentos() {
   // API Integration
   const { data: notasApi, isLoading: loadingNotas } =
     useNotas(LOGGED_PRODUCER_ID);
+  const { data: notaDetalhada, isLoading: loadingNotaDetalhada } = useNota(
+    selectedNotaId || "",
+  );
   const { data: rascunhosApi, isLoading: loadingRascunhos } =
     useRascunhos(LOGGED_PRODUCER_ID);
   const enviarRascunhoMutation = useEnviarRascunhoContador();
   const finalizarRascunhoMutation = useFinalizarRascunho();
+  const gerarNotaDiretaMutation = useGerarNotaDireta();
 
   const {
     solicitacoes,
@@ -232,6 +246,7 @@ export default function Documentos() {
             : "Pendente",
       fileType: "pdf" as const,
       fileUrl: nota.arquivoUrl || "/placeholder.svg",
+      notaId: nota.id, // Store original nota ID for fetching details
     }));
   }, [notasApi]);
 
@@ -401,7 +416,10 @@ export default function Documentos() {
                           {doc.status}
                         </Badge>
                         <button
-                          onClick={() => setSelected(doc)}
+                          onClick={() => {
+                            setSelected(doc);
+                            setSelectedNotaId((doc as any).notaId || null);
+                          }}
                           className="p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
                           aria-label="Ver documento"
                         >
@@ -653,27 +671,105 @@ export default function Documentos() {
           <DialogHeader>
             <DialogTitle className="font-heading">Emissão de NF-e</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 py-2">
-            <div className="flex items-start gap-3 rounded-lg border border-accent/30 bg-accent/5 p-4">
-              <FileOutput size={24} className="text-accent shrink-0 mt-0.5" />
-              <p className="text-sm text-foreground">
-                Funcionalidade disponível em versão futura. Por enquanto, o
-                contador pode orientar a emissão com base neste rascunho
-                aprovado.
-              </p>
+          {emitirDraft && (
+            <div className="space-y-4 py-2">
+              <div className="flex items-start gap-3 rounded-lg border border-primary/30 bg-primary/5 p-4">
+                <FileOutput size={24} className="text-primary shrink-0 mt-0.5" />
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-foreground">
+                    {emitirDraft.titulo}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {emitirDraft.tipo} · {emitirDraft.uf}/{emitirDraft.municipio}
+                  </p>
+                </div>
+              </div>
+              
+              <div className="rounded-lg border bg-muted/30 p-3 space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Valor Total</span>
+                  <span className="font-semibold">
+                    {parseFloat(emitirDraft.valorTotal).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Itens</span>
+                  <span className="font-medium">{emitirDraft.itens.length}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Data</span>
+                  <span className="font-medium">{formatDate(emitirDraft.data)}</span>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-2 rounded-lg bg-accent/10 p-3 text-sm text-accent">
+                <TrendingUp size={16} className="shrink-0 mt-0.5" />
+                <p>
+                  Ao emitir, este rascunho será convertido em uma NF-e oficial e aparecerá em seus documentos fiscais.
+                </p>
+              </div>
             </div>
-          </div>
+          )}
           <DialogFooter className="gap-2">
             <Button variant="outline" onClick={() => setEmitirOpen(false)}>
-              Entendi
+              Cancelar
             </Button>
             <Button
+              variant="outline"
               onClick={() => {
                 setEmitirOpen(false);
                 if (emitirDraft) setViewDraft(emitirDraft);
               }}
             >
-              <Eye size={14} className="mr-1" /> Ver dados do rascunho
+              <Eye size={14} className="mr-1" /> Ver detalhes
+            </Button>
+            <Button
+              disabled={finalizarRascunhoMutation.isPending || gerarNotaDiretaMutation.isPending}
+              onClick={async () => {
+                if (!emitirDraft) return;
+                try {
+                  // Check if this is an API draft (UUID) or local/mock draft (numeric)
+                  if (isUUID(emitirDraft.id)) {
+                    // API draft - use finalizar endpoint
+                    await finalizarRascunhoMutation.mutateAsync(String(emitirDraft.id));
+                  } else {
+                    // Local/mock draft - use gerar-direta to create NF-e directly
+                    const tipoNota = emitirDraft.tipo === "entrada" || emitirDraft.tipo === "Entrada" ? "entrada" : "saida";
+                    await gerarNotaDiretaMutation.mutateAsync({
+                      produtorId: LOGGED_PRODUCER_ID,
+                      tipo: tipoNota,
+                      cfop: tipoNota === "saida" ? "5102" : "1102", // CFOP padrão para venda/compra
+                      naturezaOperacao: tipoNota === "saida" ? "Venda de produtos agrícolas" : "Compra de insumos",
+                      nomeDestinatario: "Cooperativa Agrícola",
+                      cpfCnpjDestinatario: "00.000.000/0001-00",
+                      ufDestino: emitirDraft.uf || "PR",
+                      dataEmissao: new Date().toISOString().split("T")[0],
+                      itens: emitirDraft.itens.map((item, idx) => ({
+                        numeroItem: idx + 1,
+                        descricao: item.descricao || "Item",
+                        quantidade: parseFloat(item.quantidade) || 1,
+                        valorUnitario: parseFloat(item.valor) || 0,
+                        valorTotal: (parseFloat(item.quantidade) || 1) * (parseFloat(item.valor) || 0),
+                      })),
+                    });
+                    // Remove from local drafts
+                    updateDraft(emitirDraft.id, { status: "finalizado" as any });
+                  }
+                  toast.success("NF-e emitida com sucesso!");
+                  setEmitirOpen(false);
+                  setEmitirDraft(null);
+                } catch (error) {
+                  console.error("Erro ao emitir:", error);
+                  toast.error("Erro ao emitir NF-e. Tente novamente.");
+                }
+              }}
+            >
+              {(finalizarRascunhoMutation.isPending || gerarNotaDiretaMutation.isPending) ? (
+                <Loader2 size={14} className="mr-1 animate-spin" />
+              ) : (
+                <FileOutput size={14} className="mr-1" />
+              )}
+              {(finalizarRascunhoMutation.isPending || gerarNotaDiretaMutation.isPending) ? "Emitindo..." : "Emitir NF-e"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -682,7 +778,12 @@ export default function Documentos() {
       {/* Document viewer dialog */}
       <Dialog
         open={selected !== null}
-        onOpenChange={(open) => !open && setSelected(null)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setSelected(null);
+            setSelectedNotaId(null);
+          }
+        }}
       >
         <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -692,8 +793,154 @@ export default function Documentos() {
           </DialogHeader>
           {selected && (
             <div className="space-y-4 pt-1">
-              {/* File preview */}
-              <div className="rounded-lg border bg-muted/30 overflow-hidden flex items-center justify-center min-h-[200px]">
+              {loadingNotaDetalhada && selectedNotaId ? (
+                <div className="flex flex-col items-center gap-4 py-8">
+                  <Loader2 className="animate-spin text-primary" size={32} />
+                  <p className="text-sm text-muted-foreground">
+                    Carregando detalhes...
+                  </p>
+                </div>
+              ) : notaDetalhada && selectedNotaId ? (
+                /* NF-e detalhada da API */
+                <div className="space-y-4">
+                  {/* File preview */}
+                  <div className="rounded-lg border bg-muted/30 overflow-hidden flex items-center justify-center min-h-[160px]">
+                    <div className="flex flex-col items-center gap-3 py-8 text-muted-foreground">
+                      <File size={48} strokeWidth={1.5} />
+                      <span className="text-sm font-medium">NF-e {notaDetalhada.numero}</span>
+                      <span className="text-xs">{notaDetalhada.tipo === "entrada" ? "Nota de Entrada" : "Nota de Saída"}</span>
+                    </div>
+                  </div>
+
+                  <dl className="grid grid-cols-2 gap-y-3 gap-x-4 text-sm">
+                    <div>
+                      <dt className="text-muted-foreground">Número</dt>
+                      <dd className="font-medium">{notaDetalhada.numero || "—"}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-muted-foreground">Série</dt>
+                      <dd className="font-medium">{notaDetalhada.serie || "—"}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-muted-foreground">Tipo</dt>
+                      <dd className="font-medium">{notaDetalhada.tipo === "entrada" ? "Entrada" : "Saída"}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-muted-foreground">Data Emissão</dt>
+                      <dd className="font-medium">
+                        {notaDetalhada.dataEmissao ? formatDate(notaDetalhada.dataEmissao.split("T")[0]) : "—"}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-muted-foreground">Valor Total</dt>
+                      <dd className="font-semibold text-lg">
+                        {formatCurrency(notaDetalhada.valorTotal || 0)}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-muted-foreground">Status</dt>
+                      <dd>
+                        <Badge className={getStatusStyle(
+                          notaDetalhada.status === "processado"
+                            ? "Emitido"
+                            : notaDetalhada.status === "enviado_contador"
+                              ? "Encaminhado"
+                              : "Pendente"
+                        )}>
+                          {notaDetalhada.status === "processado"
+                            ? "Emitido"
+                            : notaDetalhada.status === "enviado_contador"
+                              ? "Encaminhado"
+                              : "Pendente"}
+                        </Badge>
+                      </dd>
+                    </div>
+                    {notaDetalhada.cfop && (
+                      <div>
+                        <dt className="text-muted-foreground">CFOP</dt>
+                        <dd className="font-medium">{notaDetalhada.cfop}</dd>
+                      </div>
+                    )}
+                    {notaDetalhada.naturezaOperacao && (
+                      <div className="col-span-2">
+                        <dt className="text-muted-foreground">Natureza da Operação</dt>
+                        <dd className="font-medium">{notaDetalhada.naturezaOperacao}</dd>
+                      </div>
+                    )}
+                  </dl>
+
+                  {/* Impostos */}
+                  {(notaDetalhada.valorCbs || notaDetalhada.valorIbs || notaDetalhada.valorFunrural || notaDetalhada.valorIcms || notaDetalhada.valorIpi) && (
+                    <div className="border-t pt-3">
+                      <h4 className="text-sm font-semibold mb-2">Impostos</h4>
+                      <dl className="grid grid-cols-2 gap-y-2 gap-x-4 text-xs">
+                        {notaDetalhada.valorCbs > 0 && (
+                          <>
+                            <dt className="text-muted-foreground">CBS</dt>
+                            <dd className="font-medium text-right">{formatCurrency(notaDetalhada.valorCbs)}</dd>
+                          </>
+                        )}
+                        {notaDetalhada.valorIbs > 0 && (
+                          <>
+                            <dt className="text-muted-foreground">IBS</dt>
+                            <dd className="font-medium text-right">{formatCurrency(notaDetalhada.valorIbs)}</dd>
+                          </>
+                        )}
+                        {notaDetalhada.valorFunrural > 0 && (
+                          <>
+                            <dt className="text-muted-foreground">FUNRURAL</dt>
+                            <dd className="font-medium text-right">{formatCurrency(notaDetalhada.valorFunrural)}</dd>
+                          </>
+                        )}
+                        {notaDetalhada.valorIcms > 0 && (
+                          <>
+                            <dt className="text-muted-foreground">ICMS</dt>
+                            <dd className="font-medium text-right">{formatCurrency(notaDetalhada.valorIcms)}</dd>
+                          </>
+                        )}
+                        {notaDetalhada.valorIpi > 0 && (
+                          <>
+                            <dt className="text-muted-foreground">IPI</dt>
+                            <dd className="font-medium text-right">{formatCurrency(notaDetalhada.valorIpi)}</dd>
+                          </>
+                        )}
+                      </dl>
+                    </div>
+                  )}
+
+                  {/* Itens */}
+                  {notaDetalhada.itens && notaDetalhada.itens.length > 0 && (
+                    <div className="border-t pt-3">
+                      <h4 className="text-sm font-semibold mb-2">Itens da Nota</h4>
+                      <div className="space-y-2">
+                        {notaDetalhada.itens.map((item, idx) => (
+                          <div key={idx} className="bg-muted/30 rounded-md p-3 text-xs">
+                            <div className="flex justify-between items-start mb-1">
+                              <span className="font-medium">{item.descricao}</span>
+                              <span className="font-semibold">{formatCurrency(item.valorTotal || 0)}</span>
+                            </div>
+                            <div className="text-muted-foreground">
+                              {item.quantidade} {item.unidade} × {formatCurrency(item.valorUnitario || 0)}
+                              {item.ncm && <span className="ml-2">• NCM {item.ncm}</span>}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {notaDetalhada.observacoes && (
+                    <div className="border-t pt-3">
+                      <h4 className="text-sm font-semibold mb-1">Observações</h4>
+                      <p className="text-xs text-muted-foreground">{notaDetalhada.observacoes}</p>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                /* Documento genérico (mock ou documento local) */
+                <div className="space-y-4">
+                  {/* File preview */}
+                  <div className="rounded-lg border bg-muted/30 overflow-hidden flex items-center justify-center min-h-[200px]">
                 {selected.fileType === "image" ? (
                   <img
                     src={selected.fileUrl}
@@ -757,11 +1004,16 @@ export default function Documentos() {
                     </div>
                   )}
               </dl>
+              </div>
+              )}
               <div className="flex gap-2 pt-2">
                 <Button
                   variant="outline"
                   className="flex-1"
-                  onClick={() => setSelected(null)}
+                  onClick={() => {
+                    setSelected(null);
+                    setSelectedNotaId(null);
+                  }}
                 >
                   Fechar
                 </Button>

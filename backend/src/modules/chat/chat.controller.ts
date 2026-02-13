@@ -12,7 +12,7 @@ import {
 } from './dto/chat.dto';
 
 @ApiTags('chat')
-@Controller('api/chat')
+@Controller('chat')
 export class ChatController {
   constructor(
     private readonly chatService: ChatService,

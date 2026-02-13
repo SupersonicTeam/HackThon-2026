@@ -29,8 +29,20 @@ export function useEventos(
 export function useVencimentos(produtorId: string, dias?: number) {
   return useQuery({
     queryKey: ["vencimentos", produtorId, dias],
-    queryFn: () => calendarioService.getVencimentos(produtorId, { dias }),
-    enabled: !!produtorId,
+    queryFn: async () => {
+      try {
+        return await calendarioService.getVencimentos(produtorId, { dias });
+      } catch (error: any) {
+        // Se backend não implementado (404), retorna array vazio sem logar erro
+        if (error?.status === 404) {
+          return { vencimentos: [] };
+        }
+        throw error;
+      }
+    },
+    // TODO: Mudar para 'enabled: !!produtorId' quando API calendario-fiscal for implementada no backend
+    enabled: false, // Temporariamente desabilitado - API não implementada
+    retry: false,
   });
 }
 

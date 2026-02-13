@@ -465,6 +465,9 @@ model DocumentoAnexado {
   caminhoArquivo String
   checksum       String? // Hash do arquivo para verificação
 
+  // Dados Extraídos pela IA
+  dadosExtraidos Json? // Dados extraídos pela IA (valores, datas, observações)
+
   dataUpload DateTime @default(now())
 
   // Relacionamento

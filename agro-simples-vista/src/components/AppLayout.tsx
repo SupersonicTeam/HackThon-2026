@@ -16,29 +16,9 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
-
-export interface Notificacao {
-  id: number;
-  tipo: "Solicitação" | "Documento" | "Pagamento";
-  titulo: string;
-  dataHora: string;
-  lida: boolean;
-  rota: string;
-}
-
-const notificacoesIniciais: Notificacao[] = [
-  { id: 1, tipo: "Solicitação", titulo: "Comprovantes de frete (vence 20/02)", dataHora: "13/02 09:15", lida: false, rota: "/calendario" },
-  { id: 2, tipo: "Documento", titulo: "Recibo Manutenção Trator anexado", dataHora: "12/02 16:40", lida: false, rota: "/documentos" },
-  { id: 3, tipo: "Pagamento", titulo: "FUNRURAL a vencer (20/02)", dataHora: "12/02 08:00", lida: false, rota: "/contador" },
-  { id: 4, tipo: "Solicitação", titulo: "NF Insumos Safra pendente", dataHora: "11/02 14:22", lida: true, rota: "/calendario" },
-  { id: 5, tipo: "Documento", titulo: "NF Venda Soja Lote 12 validada", dataHora: "10/02 11:05", lida: false, rota: "/documentos" },
-  { id: 6, tipo: "Pagamento", titulo: "Folha de pagamento Fev disponível", dataHora: "10/02 09:30", lida: true, rota: "/contador" },
-  { id: 7, tipo: "Solicitação", titulo: "Seguro agrícola: doc obrigatório", dataHora: "09/02 17:10", lida: true, rota: "/calendario" },
-  { id: 8, tipo: "Documento", titulo: "Extrato Conta Rural Jan rejeitado", dataHora: "08/02 10:45", lida: false, rota: "/documentos" },
-];
+import { useNotificacoes } from "@/contexts/NotificacoesContext";
 
 const tipoIcon: Record<string, string> = {
   "Solicitação": "📋",
@@ -58,24 +38,11 @@ export default function AppLayout() {
   const location = useLocation();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [notificacoes, setNotificacoes] = useState<Notificacao[]>(notificacoesIniciais);
   const [popoverOpen, setPopoverOpen] = useState(false);
+  
+  const { notificacoes, marcarLida, marcarTodasLidas, limparTodas, naoLidas } = useNotificacoes();
 
-  const naoLidas = notificacoes.filter((n) => !n.lida).length;
-
-  const marcarLida = (id: number) => {
-    setNotificacoes((prev) => prev.map((n) => n.id === id ? { ...n, lida: true } : n));
-  };
-
-  const marcarTodasLidas = () => {
-    setNotificacoes((prev) => prev.map((n) => ({ ...n, lida: true })));
-  };
-
-  const limparTodas = () => {
-    setNotificacoes([]);
-  };
-
-  const handleClickNotificacao = (notif: Notificacao) => {
+  const handleClickNotificacao = (notif: { id: number; rota: string }) => {
     marcarLida(notif.id);
     setPopoverOpen(false);
     navigate(notif.rota);

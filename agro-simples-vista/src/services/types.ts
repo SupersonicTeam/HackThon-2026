@@ -59,6 +59,7 @@ export interface NotaFiscal {
   valorIbs?: number;
   valorFunrural?: number;
   valorIcms?: number;
+  valorIpi?: number;
   observacoes?: string;
   dataEmissao?: string;
   createdAt?: string;
@@ -194,12 +195,13 @@ export interface CreateItemNotaFiscalDto {
 export interface GerarNotaDiretaDto {
   produtorId: string;
   tipo: "entrada" | "saida";
+  cfop: string;
   naturezaOperacao: string;
-  cfop?: string;
-  destinatarioNome?: string;
-  destinatarioCpfCnpj?: string;
-  uf?: string;
-  municipio?: string;
+  nomeDestinatario: string;
+  cpfCnpjDestinatario: string;
+  ufDestino: string;
+  dataEmissao: string; // ISO date string
+  observacoes?: string;
   itens: CreateItemNotaFiscalDto[];
 }
 

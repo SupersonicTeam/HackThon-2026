@@ -213,6 +213,7 @@ export interface DocumentoUnificado {
   impactoTributario?: number;
   fileType: "image" | "pdf";
   fileUrl: string;
+  notaId?: string; // ID original da nota fiscal para buscar detalhes
 }
 
 export const documentosUnificados: DocumentoUnificado[] = [

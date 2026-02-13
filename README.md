@@ -50,25 +50,25 @@
 
 ### 👥 Gestão de Clientes
 
-- [ ] Lista de produtores
-- [ ] Notas em tempo real
-- [ ] Acompanhamento de pendências
+- [X] Lista de produtores
+- [X] Notas em tempo real
+- [X] Acompanhamento de pendências
 
 ---
 
 ### 📁 Central de Documentos
 
-- [ ] Acesso organizado às notas
-- [ ] Filtros por período/categoria
-- [ ] Relatórios consolidados
+- [X] Acesso organizado às notas
+- [X] Filtros por período/categoria
+- [X] Relatórios consolidados
 
 ---
 
 ### 💰 Apuração Tributária
 
-- [ ] Cálculo de impostos
-- [ ] Geração de relatórios/PDFs
-- [ ] Compartilhamento com o cliente
+- [X] Cálculo de impostos
+- [X] Geração de relatórios/PDFs
+- [X] Compartilhamento com o cliente
 
 ---
 
@@ -76,10 +76,10 @@
 
 ### 📲 Notificações e Comunicação
 
-- [ ] Enviar notificações sobre pendências
-- [ ] Alertas sobre notas a serem emitidas
-- [ ] Link rápido para gerar nota
-- [ ] Link para enviar nota existente
+- [X] Enviar notificações sobre pendências
+- [X] Alertas sobre notas a serem emitidas
+- [X] Link rápido para gerar nota
+- [X] Link para enviar nota existente
 
 
 

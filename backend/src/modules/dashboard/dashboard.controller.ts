@@ -49,7 +49,7 @@ import {
 } from './dto/dashboard.dto';
 
 @ApiTags('Dashboard')
-@Controller('api/dashboard')
+@Controller('dashboard')
 export class DashboardController {
   constructor(
     private readonly dashboardService: DashboardService,

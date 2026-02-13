@@ -14,7 +14,19 @@ import Contador from "@/pages/Contador";
 import NotFound from "./pages/NotFound";
 
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: (failureCount, error: any) => {
+        // Não retenta se for 404 (endpoint não implementado)
+        if (error?.status === 404) return false;
+        // Retenta até 3 vezes para outros erros
+        return failureCount < 3;
+      },
+      refetchOnWindowFocus: false, // Não recarrega ao focar na janela
+    },
+  },
+});
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -22,7 +34,12 @@ const App = () => (
       <SolicitacoesProvider>
         <Toaster />
         <Sonner />
-        <BrowserRouter>
+        <BrowserRouter
+          future={{
+            v7_startTransition: true,
+            v7_relativeSplatPath: true,
+          }}
+        >
           <Routes>
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route element={<AppLayout />}>

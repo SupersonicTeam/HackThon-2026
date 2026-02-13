@@ -26,7 +26,7 @@ interface Props {
 }
 
 export default function AnexarDocumentoDialog({ open, onOpenChange, preSelectedRequestId }: Props) {
-  const { pendencias, anexarDocumento, listar } = useContador();
+  const { pendencias, anexarDocumento, listar, extrairDadosDocumento } = useContador();
   const [selectedRequestId, setSelectedRequestId] = useState<string>("");
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
@@ -34,6 +34,8 @@ export default function AnexarDocumentoDialog({ open, onOpenChange, preSelectedR
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const [isMobile, setIsMobile] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [dadosExtraidos, setDadosExtraidos] = useState<any>(null);
+  const [extraindo, setExtraindo] = useState(false);
 
   const isPreSelected = preSelectedRequestId != null;
 
@@ -58,7 +60,7 @@ export default function AnexarDocumentoDialog({ open, onOpenChange, preSelectedR
     return () => mql.removeEventListener("change", onChange);
   }, []);
 
-  const pendentes = pendencias.filter((p) => p.status === "pendente" && p.produtorId === LOGGED_PRODUCER_ID);
+  const pendentes = pendencias.filter((p) => (p.status === "pendente" || p.status === "enviado") && p.produtorId === LOGGED_PRODUCER_ID);
   const selected = pendencias.find((p) => String(p.id) === selectedRequestId);
 
   function handleFile(f: File | null) {
@@ -75,6 +77,8 @@ export default function AnexarDocumentoDialog({ open, onOpenChange, preSelectedR
     setSelectedRequestId("");
     setFile(null);
     setPreview(null);
+    setDadosExtraidos(null);
+    setExtraindo(false);
   }
 
   async function handleSave() {
@@ -93,19 +97,38 @@ export default function AnexarDocumentoDialog({ open, onOpenChange, preSelectedR
         // Fallback
       }
 
-      await anexarDocumento({
+      const documento = await anexarDocumento({
         pendenciaId: selectedRequestId,
         nomeArquivo: file.name,
         tipoDocumento,
         tamanho: file.size,
-      });
+      }, file); // <-- Passa o arquivo real para upload
 
-      toast.success("Documento anexado com sucesso!");
-      reset();
-      onOpenChange(false);
+      // Extrair dados com IA
+      setExtraindo(true);
+      try {
+        console.log('🔍 Iniciando extração de dados para documento:', documento.id);
+        const resultado = await extrairDadosDocumento(documento.id);
+        console.log('✅ Resultado da extração:', resultado);
+        setDadosExtraidos(resultado.dadosExtraidos);
+        toast.success("Documento anexado e dados extraídos com sucesso!");
+      } catch (error) {
+        console.error("❌ Erro ao extrair dados:", error);
+        toast.success("Documento anexado (extração de dados falhou)");
+      } finally {
+        setExtraindo(false);
+      }
+
+      // Recarregar a lista de pendências
+      await listar(LOGGED_PRODUCER_ID);
+
+      // Fechar após delay para mostrar resultado
+      setTimeout(() => {
+        reset();
+        onOpenChange(false);
+      }, 2000);
     } catch (error: any) {
       toast.error(error?.message || "Erro ao anexar documento");
-    } finally {
       setSaving(false);
     }
   }
@@ -214,38 +237,87 @@ export default function AnexarDocumentoDialog({ open, onOpenChange, preSelectedR
                   <p className="text-xs text-muted-foreground">{(file.size / 1024).toFixed(0)} KB</p>
                 </div>
                 <Button variant="ghost" size="icon" className="shrink-0" onClick={() => { setFile(null); setPreview(null); }}>
-                  <X size={16} />
+                  <X size={18} />
                 </Button>
               </div>
             )}
-
-            <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => handleFile(e.target.files?.[0] ?? null)} />
-            <input ref={fileInputRef} type="file" accept="image/*,.pdf" className="hidden" onChange={(e) => handleFile(e.target.files?.[0] ?? null)} />
           </div>
 
-          {/* AI placeholder */}
+          {/* AI extraction section */}
           {file && (
             <div className="rounded-lg border border-dashed border-primary/30 bg-primary/5 p-3 space-y-1">
               <div className="flex items-center gap-2 text-sm font-medium text-primary">
                 <Sparkles size={16} />
                 Leitura automática (IA)
               </div>
-              <p className="text-xs text-muted-foreground">Em breve: vamos extrair automaticamente valores e datas da imagem.</p>
-              <div className="grid grid-cols-2 gap-2 pt-1">
-                <div className="rounded bg-muted/60 p-2 text-center">
-                  <p className="text-[10px] text-muted-foreground">Data</p>
-                  <p className="text-xs font-medium text-muted-foreground/60">—</p>
-                </div>
-                <div className="rounded bg-muted/60 p-2 text-center">
-                  <p className="text-[10px] text-muted-foreground">Obs.</p>
-                  <p className="text-xs font-medium text-muted-foreground/60">—</p>
-                </div>
-              </div>
+              {extraindo ? (
+                <p className="text-xs text-muted-foreground animate-pulse">Extraindo dados do documento...</p>
+              ) : dadosExtraidos ? (
+                <>
+                  <p className="text-xs text-green-600 font-medium">✓ Dados extraídos com sucesso!</p>
+                  <div className="grid grid-cols-2 gap-2 pt-1">
+                    {dadosExtraidos.dataReferencia && (
+                      <div className="rounded bg-green-50 border border-green-200 p-2">
+                        <p className="text-[10px] text-green-600 font-medium">Data</p>
+                        <p className="text-xs font-semibold text-green-700">
+                          {new Date(dadosExtraidos.dataReferencia).toLocaleDateString('pt-BR')}
+                        </p>
+                      </div>
+                    )}
+                    {dadosExtraidos.valor && (
+                      <div className="rounded bg-green-50 border border-green-200 p-2">
+                        <p className="text-[10px] text-green-600 font-medium">Valor</p>
+                        <p className="text-xs font-semibold text-green-700">
+                          R$ {dadosExtraidos.valor.toFixed(2)}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                  {dadosExtraidos.observacao && (
+                    <p className="text-xs text-muted-foreground pt-1 leading-tight">
+                      {dadosExtraidos.observacao}
+                    </p>
+                  )}
+                </>
+              ) : (
+                <>
+                  <p className="text-xs text-muted-foreground">Os dados serão extraídos automaticamente após salvar.</p>
+                  <div className="grid grid-cols-2 gap-2 pt-1">
+                    <div className="rounded bg-muted/60 p-2 text-center">
+                      <p className="text-[10px] text-muted-foreground">Data</p>
+                      <p className="text-xs font-medium text-muted-foreground/60">—</p>
+                    </div>
+                    <div className="rounded bg-muted/60 p-2 text-center">
+                      <p className="text-[10px] text-muted-foreground">Valor</p>
+                      <p className="text-xs font-medium text-muted-foreground/60">—</p>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           )}
 
-          <Button className="w-full" size="lg" onClick={handleSave} disabled={!selectedRequestId || !file || saving}>
-            {saving ? "Salvando..." : "Salvar"}
+          {/* Hidden file inputs */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*,application/pdf"
+            className="hidden"
+            onChange={(e) => handleFile(e.target.files?.[0] || null)}
+          />
+          {isMobile && (
+            <input
+              ref={cameraInputRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              className="hidden"
+              onChange={(e) => handleFile(e.target.files?.[0] || null)}
+            />
+          )}
+
+          <Button className="w-full" size="lg" onClick={handleSave} disabled={!selectedRequestId || !file || saving || extraindo}>
+            {saving || extraindo ? (extraindo ? "Extraindo dados..." : "Salvando...") : "Salvar"}
           </Button>
         </div>
       </DialogContent>

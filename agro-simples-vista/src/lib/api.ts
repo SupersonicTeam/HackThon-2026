@@ -49,15 +49,20 @@ class ApiClient {
         .json()
         .catch(() => ({ message: "Erro desconhecido" }));
       
-      // Log mais detalhado para debugging
-      console.error('API Error:', {
-        status: response.status,
-        statusText: response.statusText,
-        endpoint,
-        error,
-      });
+      // Log apenas para erros que não são 404 (endpoints não implementados)
+      if (response.status !== 404) {
+        console.error('API Error:', {
+          status: response.status,
+          statusText: response.statusText,
+          endpoint,
+          error,
+        });
+      }
       
-      throw new Error(error.message || `HTTP ${response.status}`);
+      // Throw com informação de status para tratamento nos hooks
+      const err: any = new Error(error.message || `HTTP ${response.status}`);
+      err.status = response.status;
+      throw err;
     }
 
     // Handle empty responses

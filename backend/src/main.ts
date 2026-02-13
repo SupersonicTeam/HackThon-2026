@@ -11,7 +11,12 @@ async function bootstrap() {
 
   // Enable CORS - allow all origins in development
   app.enableCors({
-    origin: true, // Allow all origins
+    origin: [
+      'http://localhost:5173',
+      'http://localhost:8080',
+      'http://26.7.233.225:8080',
+      /^http:\/\/\d+\.\d+\.\d+\.\d+:\d+$/, // Accept any IP:port
+    ],
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     credentials: true,
     allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
@@ -41,10 +46,11 @@ async function bootstrap() {
   SwaggerModule.setup('api/docs', app, document);
 
   const port = process.env.PORT || 3001;
-  await app.listen(port);
+  await app.listen(port, '0.0.0.0'); // Listen on all network interfaces
 
   console.log(`🚀 AgroTributos API running on http://localhost:${port}`);
   console.log(`📚 Swagger docs: http://localhost:${port}/api/docs`);
+  console.log(`🌐 Network access: http://<your-ip>:${port}`);
 }
 
 bootstrap();

@@ -165,11 +165,36 @@ export function useContador() {
     }
   }, []);
 
-  const anexarDocumento = useCallback(async (payload: AnexarDocumentoPayload) => {
+  const anexarDocumento = useCallback(async (payload: AnexarDocumentoPayload, file?: File) => {
     setLoading(true);
     setError(null);
     try {
-      const documento = await api.post<DocumentoAnexado>("/contador/documentos/anexar", payload);
+      let documento: DocumentoAnexado;
+      
+      // Se tiver arquivo, usar FormData para upload real
+      if (file) {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('pendenciaId', payload.pendenciaId);
+        formData.append('tipoDocumento', payload.tipoDocumento);
+        formData.append('nomeArquivo', payload.nomeArquivo);
+        if (payload.tamanho) formData.append('tamanho', String(payload.tamanho));
+
+        const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001/api'}/contador/documentos/anexar`, {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!response.ok) {
+          throw new Error('Erro ao anexar documento');
+        }
+
+        documento = await response.json();
+      } else {
+        // Fallback: sem arquivo físico
+        documento = await api.post<DocumentoAnexado>("/contador/documentos/anexar", payload);
+      }
+      
       // Atualizar status da pendência localmente
       setPendencias((prev) =>
         prev.map((p) =>
@@ -193,6 +218,20 @@ export function useContador() {
       return docs;
     } catch (e: any) {
       setError(e?.message ?? "Erro ao listar documentos");
+      throw e;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const extrairDadosDocumento = useCallback(async (documentoId: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const dados = await api.post<any>(`/contador/documentos/${documentoId}/extrair-dados`);
+      return dados;
+    } catch (e: any) {
+      setError(e?.message ?? "Erro ao extrair dados do documento");
       throw e;
     } finally {
       setLoading(false);
@@ -226,6 +265,7 @@ export function useContador() {
     rejeitar,
     anexarDocumento,
     listarDocumentos,
+    extrairDadosDocumento,
     listarRecebidos,
   };
 }

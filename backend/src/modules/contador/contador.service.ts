@@ -3,12 +3,16 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { CreatePendenciaDto } from './dto/create-pendencia.dto';
 import { UpdatePendenciaDto } from './dto/update-pendencia.dto';
 import { AnexarDocumentoDto } from './dto/anexar-documento.dto';
+import { ContadorOcrService } from './contador-ocr.service';
 
 type AgendaStatus = 'aberto' | 'concluido' | 'cancelado';
 
 @Injectable()
 export class ContadorService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private ocrService: ContadorOcrService,
+  ) {}
 
   private async upsertAgendaFromPendencia(p: {
     id: string;
@@ -197,27 +201,50 @@ export class ContadorService {
     return pendencia;
   }
 
-  async anexarDocumento(dto: AnexarDocumentoDto) {
+  async anexarDocumento(dto: AnexarDocumentoDto, file?: Express.Multer.File) {
+    if (!dto.pendenciaId) {
+      throw new Error('PendenciaId é obrigatório');
+    }
+
     const pendencia = await this.prisma.pendenciaContador.findUnique({
       where: { id: dto.pendenciaId },
     });
     if (!pendencia) throw new NotFoundException('Pendência não encontrada');
 
+    if (!file) {
+      throw new Error('Arquivo é obrigatório');
+    }
+
+    // Usar o arquivo real
+    const caminhoArquivo = `/uploads/documentos/${file.filename}`;
+    const nomeArquivo = file.originalname;
+    const tamanho = file.size;
+
     // Criar o documento anexado
     const documento = await this.prisma.documentoAnexado.create({
       data: {
         pendenciaId: dto.pendenciaId,
-        nomeArquivo: dto.nomeArquivo,
+        nomeArquivo,
         tipoDocumento: dto.tipoDocumento,
-        tamanho: dto.tamanho || 0,
-        caminhoArquivo: dto.caminhoArquivo || `/uploads/documentos/${dto.nomeArquivo}`,
+        tamanho,
+        caminhoArquivo,
       },
     });
 
     // Atualizar status da pendência para "enviado"
-    await this.prisma.pendenciaContador.update({
+    const pendenciaAtualizada = await this.prisma.pendenciaContador.update({
       where: { id: dto.pendenciaId },
       data: { status: 'enviado' },
+    });
+
+    // Atualizar a agenda mantendo status como 'aberto' (pendência enviada ainda precisa ser avaliada)
+    await this.upsertAgendaFromPendencia({
+      id: pendenciaAtualizada.id,
+      produtorId: pendenciaAtualizada.produtorId,
+      titulo: pendenciaAtualizada.titulo,
+      descricao: pendenciaAtualizada.descricao,
+      dataLimite: pendenciaAtualizada.dataLimite,
+      agendaStatus: 'aberto', // Mantém aberto até o contador aprovar
     });
 
     return documento;
@@ -228,6 +255,66 @@ export class ContadorService {
       where: { pendenciaId },
       orderBy: { dataUpload: 'desc' },
     });
+  }
+
+  async downloadDocumento(id: string, res: any) {
+    const documento = await this.prisma.documentoAnexado.findUnique({
+      where: { id },
+    });
+
+    if (!documento) {
+      throw new NotFoundException('Documento não encontrado');
+    }
+
+    const filePath = `.${documento.caminhoArquivo}`;
+    res.download(filePath, documento.nomeArquivo);
+  }
+
+  async extrairDadosDocumento(id: string) {
+    const documento = await this.prisma.documentoAnexado.findUnique({
+      where: { id },
+    });
+
+    if (!documento) {
+      throw new NotFoundException('Documento não encontrado');
+    }
+
+    console.log('📄 Documento encontrado:', documento.nomeArquivo);
+
+    // Se já tem dados extraídos, retorna
+    if ((documento as any).dadosExtraidos) {
+      console.log('✓ Dados já existentes:', (documento as any).dadosExtraidos);
+      return {
+        documentoId: documento.id,
+        dadosExtraidos: (documento as any).dadosExtraidos,
+        jaExistente: true,
+      };
+    }
+
+    // Extrai usando IA
+    const caminhoCompleto = `.${documento.caminhoArquivo}`;
+    console.log('🔍 Iniciando extração OCR para:', caminhoCompleto);
+    
+    const dadosExtraidos = await this.ocrService.extractDocumentoData(
+      caminhoCompleto,
+      documento.tipoDocumento,
+    );
+
+    console.log('✅ Dados extraídos:', dadosExtraidos);
+
+    // Salva no banco
+    await this.prisma.documentoAnexado.update({
+      where: { id },
+      data: { dadosExtraidos: dadosExtraidos as any },
+    });
+
+    console.log('💾 Dados salvos no banco');
+
+    return {
+      documentoId: documento.id,
+      dadosExtraidos,
+      jaExistente: false,
+    };
   }
 
   async listarPendenciasComDocumentos(produtorId: string) {

@@ -8,7 +8,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import {
   TrendingUp,
@@ -18,15 +18,18 @@ import {
   Eye,
   Briefcase,
   Loader2,
+  File,
+  Download,
+  MessageCircle,
 } from "lucide-react";
 import {
-  ultimosDocumentos,
-  resumoFinanceiro as mockResumo,
   usuario,
 } from "@/mocks";
 import SimuladorInteligente from "@/components/SimuladorInteligente";
-import { useFluxoCaixa, useNotas, useProdutor } from "@/hooks/use-dashboard";
+import { useFluxoCaixa, useNotas, useNota, useProdutor } from "@/hooks/use-dashboard";
+import { useNotificarProximasObrigacoes } from "@/services/notificacao.service";
 import { LOGGED_PRODUCER_ID } from "@/mocks/producers";
+import { toast } from "sonner";
 
 const mesAtual = new Date().toLocaleDateString("pt-BR", {
   month: "long",
@@ -98,9 +101,15 @@ function getStatusStyle(status?: string): { label: string; color: string } {
 const previsaoSalarial = 8500;
 
 export default function Dashboard() {
-  const [previewDoc, setPreviewDoc] = useState<
-    (typeof ultimosDocumentos)[0] | null
-  >(null);
+  const [previewDoc, setPreviewDoc] = useState<{
+    id: number;
+    nome: string;
+    tipo: string;
+    data: string;
+    status?: string;
+    notaId?: string; // ID da nota na API para buscar detalhes
+    valor?: number;
+  } | null>(null);
 
   // Integração com API (com fallback para mocks)
   const {
@@ -110,19 +119,39 @@ export default function Dashboard() {
   } = useFluxoCaixa(LOGGED_PRODUCER_ID);
   const { data: notas, isLoading: loadingNotas } = useNotas(LOGGED_PRODUCER_ID);
   const { data: produtor } = useProdutor(LOGGED_PRODUCER_ID);
+  const { data: notaDetalhada, isLoading: loadingNotaDetalhada } = useNota(
+    previewDoc?.notaId || ""
+  );
+
+  // Hook para enviar notificação WhatsApp
+  const { mutate: notificarWhatsApp, isPending: enviandoNotificacao } =
+    useNotificarProximasObrigacoes();
+
+  const handleNotificarWhatsApp = () => {
+    notificarWhatsApp(LOGGED_PRODUCER_ID, {
+      onSuccess: (data) => {
+        if (data.enviados > 0) {
+          toast.success(`✅ ${data.enviados} notificação(ões) enviada(s) via WhatsApp!`);
+        } else {
+          toast.info("Nenhuma obrigação pendente para notificar.");
+        }
+      },
+      onError: () => {
+        toast.error("Erro ao enviar notificações");
+      },
+    });
+  };
 
   // Debug: log API response
   console.log("FluxoCaixa API:", { fluxoCaixa, loadingFluxo, errorFluxo });
 
-  // Usa dados da API ou fallback para mocks
-  const resumoFinanceiro = fluxoCaixa
-    ? {
-        entradas: fluxoCaixa.totalEntradas ?? 0,
-        saidas: fluxoCaixa.totalSaidas ?? 0,
-        lucro: fluxoCaixa.saldo ?? 0,
-        impostos: fluxoCaixa.totalImpostos ?? 0,
-      }
-    : mockResumo;
+  // Usa SOMENTE dados da API (sem fallback para mocks)
+  const resumoFinanceiro = {
+    entradas: fluxoCaixa?.totalEntradas ?? 0,
+    saidas: fluxoCaixa?.totalSaidas ?? 0,
+    lucro: fluxoCaixa?.saldo ?? 0,
+    impostos: fluxoCaixa?.totalImpostos ?? 0,
+  };
 
   const documentos =
     notas
@@ -141,7 +170,9 @@ export default function Dashboard() {
           nota.dataEmissao?.split("T")[0] ||
           new Date().toISOString().split("T")[0],
         status: nota.status,
-      })) || ultimosDocumentos;
+        notaId: nota.id, // Guardar ID para buscar detalhes
+        valor: nota.valorTotal || 0,
+      })) || [];
 
   const nomeUsuario = produtor?.nome || usuario.nome;
 
@@ -160,21 +191,37 @@ export default function Dashboard() {
       {/* Card 1 — Resumo financeiro */}
       <Card className="shadow-sm">
         <CardHeader className="pb-3">
-          <CardTitle className="text-base font-semibold flex items-center gap-2">
-            <DollarSign size={20} className="text-primary" />
-            Resumo rápido
-            {loadingFluxo && (
-              <Loader2
-                size={16}
-                className="animate-spin text-muted-foreground"
-              />
-            )}
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base font-semibold flex items-center gap-2">
+              <DollarSign size={20} className="text-primary" />
+              Resumo rápido
+              {loadingFluxo && (
+                <Loader2
+                  size={16}
+                  className="animate-spin text-muted-foreground"
+                />
+              )}
+            </CardTitle>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2 text-green-600 border-green-200 hover:bg-green-50"
+              onClick={handleNotificarWhatsApp}
+              disabled={enviandoNotificacao}
+            >
+              {enviandoNotificacao ? (
+                <Loader2 size={16} className="animate-spin" />
+              ) : (
+                <MessageCircle size={16} />
+              )}
+              <span className="hidden sm:inline">Notificar</span>
+            </Button>
+          </div>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/60">
-              <TrendingUp size={22} className="text-primary shrink-0" />
+              <TrendingDown size={22} className="text-destructive shrink-0" />
               <div>
                 <p className="text-xs text-muted-foreground">Entradas</p>
                 {loadingFluxo ? (
@@ -187,7 +234,7 @@ export default function Dashboard() {
               </div>
             </div>
             <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/60">
-              <TrendingDown size={22} className="text-destructive shrink-0" />
+              <TrendingUp size={22} className="text-primary shrink-0" />
               <div>
                 <p className="text-xs text-muted-foreground">Saídas</p>
                 {loadingFluxo ? (
@@ -302,6 +349,11 @@ export default function Dashboard() {
                         >
                           {statusStyle.label}
                         </Badge>
+                        {doc.valor > 0 && (
+                          <span className="text-xs font-medium text-primary">
+                            {formatCurrency(doc.valor)}
+                          </span>
+                        )}
                       </div>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
@@ -325,19 +377,207 @@ export default function Dashboard() {
         </CardContent>
       </Card>
 
-      {/* Modal preview documento */}
+      {/* Modal preview documento detalhado */}
       <Dialog open={!!previewDoc} onOpenChange={() => setPreviewDoc(null)}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{previewDoc?.nome}</DialogTitle>
-            <DialogDescription>
-              {previewDoc?.tipo} —{" "}
-              {previewDoc ? formatDate(previewDoc.data) : ""}
-            </DialogDescription>
+            <DialogTitle className="font-heading text-lg">
+              {previewDoc?.nome}
+            </DialogTitle>
           </DialogHeader>
-          <div className="rounded-lg bg-muted/60 flex items-center justify-center h-48 text-muted-foreground text-sm">
-            Pré-visualização do documento (mock)
-          </div>
+          
+          {previewDoc && (
+            <div className="space-y-4 pt-1">
+              {loadingNotaDetalhada && previewDoc.notaId ? (
+                <div className="flex flex-col items-center gap-4 py-8">
+                  <Loader2 className="animate-spin text-primary" size={32} />
+                  <p className="text-sm text-muted-foreground">
+                    Carregando detalhes...
+                  </p>
+                </div>
+              ) : notaDetalhada && previewDoc.notaId ? (
+                /* NF-e detalhada da API */
+                <div className="space-y-4">
+                  {/* File preview */}
+                  <div className="rounded-lg border bg-muted/30 overflow-hidden flex items-center justify-center min-h-[140px]">
+                    <div className="flex flex-col items-center gap-3 py-6 text-muted-foreground">
+                      <File size={40} strokeWidth={1.5} />
+                      <span className="text-sm font-medium">NF-e {notaDetalhada.numero}</span>
+                      <span className="text-xs">{notaDetalhada.tipo === "entrada" ? "Nota de Entrada" : "Nota de Saída"}</span>
+                    </div>
+                  </div>
+
+                  <dl className="grid grid-cols-2 gap-y-3 gap-x-4 text-sm">
+                    <div>
+                      <dt className="text-muted-foreground">Número</dt>
+                      <dd className="font-medium">{notaDetalhada.numero || "—"}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-muted-foreground">Série</dt>
+                      <dd className="font-medium">{notaDetalhada.serie || "—"}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-muted-foreground">Tipo</dt>
+                      <dd className="font-medium">{notaDetalhada.tipo === "entrada" ? "Entrada" : "Saída"}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-muted-foreground">Data Emissão</dt>
+                      <dd className="font-medium">
+                        {notaDetalhada.dataEmissao ? formatDate(notaDetalhada.dataEmissao.split("T")[0]) : "—"}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-muted-foreground">Valor Total</dt>
+                      <dd className="font-semibold text-lg text-primary">
+                        {formatCurrency(notaDetalhada.valorTotal || 0)}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-muted-foreground">Status</dt>
+                      <dd>
+                        <Badge
+                          variant="outline"
+                          className={`text-[10px] px-1.5 py-0 ${getStatusStyle(notaDetalhada.status).color}`}
+                        >
+                          {getStatusStyle(notaDetalhada.status).label}
+                        </Badge>
+                      </dd>
+                    </div>
+                    {notaDetalhada.cfop && (
+                      <div>
+                        <dt className="text-muted-foreground">CFOP</dt>
+                        <dd className="font-medium">{notaDetalhada.cfop}</dd>
+                      </div>
+                    )}
+                    {notaDetalhada.naturezaOperacao && (
+                      <div className="col-span-2">
+                        <dt className="text-muted-foreground">Natureza da Operação</dt>
+                        <dd className="font-medium">{notaDetalhada.naturezaOperacao}</dd>
+                      </div>
+                    )}
+                  </dl>
+
+                  {/* Impostos */}
+                  {(notaDetalhada.valorCbs || notaDetalhada.valorIbs || notaDetalhada.valorFunrural || notaDetalhada.valorIcms || notaDetalhada.valorIpi) && (
+                    <div className="border-t pt-3">
+                      <h4 className="text-sm font-semibold mb-2">Impostos</h4>
+                      <dl className="grid grid-cols-2 gap-y-2 gap-x-4 text-xs">
+                        {notaDetalhada.valorCbs > 0 && (
+                          <>
+                            <dt className="text-muted-foreground">CBS</dt>
+                            <dd className="font-medium text-right">{formatCurrency(notaDetalhada.valorCbs)}</dd>
+                          </>
+                        )}
+                        {notaDetalhada.valorIbs > 0 && (
+                          <>
+                            <dt className="text-muted-foreground">IBS</dt>
+                            <dd className="font-medium text-right">{formatCurrency(notaDetalhada.valorIbs)}</dd>
+                          </>
+                        )}
+                        {notaDetalhada.valorFunrural > 0 && (
+                          <>
+                            <dt className="text-muted-foreground">FUNRURAL</dt>
+                            <dd className="font-medium text-right">{formatCurrency(notaDetalhada.valorFunrural)}</dd>
+                          </>
+                        )}
+                        {notaDetalhada.valorIcms > 0 && (
+                          <>
+                            <dt className="text-muted-foreground">ICMS</dt>
+                            <dd className="font-medium text-right">{formatCurrency(notaDetalhada.valorIcms)}</dd>
+                          </>
+                        )}
+                        {notaDetalhada.valorIpi > 0 && (
+                          <>
+                            <dt className="text-muted-foreground">IPI</dt>
+                            <dd className="font-medium text-right">{formatCurrency(notaDetalhada.valorIpi)}</dd>
+                          </>
+                        )}
+                      </dl>
+                    </div>
+                  )}
+
+                  {/* Itens */}
+                  {notaDetalhada.itens && notaDetalhada.itens.length > 0 && (
+                    <div className="border-t pt-3">
+                      <h4 className="text-sm font-semibold mb-2">Itens da Nota</h4>
+                      <div className="space-y-2 max-h-[200px] overflow-y-auto">
+                        {notaDetalhada.itens.map((item, idx) => (
+                          <div key={idx} className="bg-muted/30 rounded-md p-3 text-xs">
+                            <div className="flex justify-between items-start mb-1">
+                              <span className="font-medium">{item.descricao}</span>
+                              <span className="font-semibold">{formatCurrency(item.valorTotal || 0)}</span>
+                            </div>
+                            <div className="text-muted-foreground">
+                              {item.quantidade} {item.unidade} × {formatCurrency(item.valorUnitario || 0)}
+                              {item.ncm && <span className="ml-2">• NCM {item.ncm}</span>}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {notaDetalhada.observacoes && (
+                    <div className="border-t pt-3">
+                      <h4 className="text-sm font-semibold mb-1">Observações</h4>
+                      <p className="text-xs text-muted-foreground">{notaDetalhada.observacoes}</p>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                /* Preview genérico (quando não tem dados da API) */
+                <div className="space-y-4">
+                  <div className="rounded-lg border bg-muted/30 overflow-hidden flex items-center justify-center min-h-[120px]">
+                    <div className="flex flex-col items-center gap-2 py-6 text-muted-foreground">
+                      <File size={40} strokeWidth={1.5} />
+                      <span className="text-sm font-medium">Documento PDF</span>
+                    </div>
+                  </div>
+                  <dl className="grid grid-cols-2 gap-y-3 gap-x-4 text-sm">
+                    <div>
+                      <dt className="text-muted-foreground">Tipo</dt>
+                      <dd className="font-medium">{previewDoc.tipo}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-muted-foreground">Data</dt>
+                      <dd className="font-medium">{formatDate(previewDoc.data)}</dd>
+                    </div>
+                    {previewDoc.valor && previewDoc.valor > 0 && (
+                      <div>
+                        <dt className="text-muted-foreground">Valor</dt>
+                        <dd className="font-semibold text-primary">{formatCurrency(previewDoc.valor)}</dd>
+                      </div>
+                    )}
+                    <div>
+                      <dt className="text-muted-foreground">Status</dt>
+                      <dd>
+                        <Badge
+                          variant="outline"
+                          className={`text-[10px] px-1.5 py-0 ${getStatusStyle(previewDoc.status).color}`}
+                        >
+                          {getStatusStyle(previewDoc.status).label}
+                        </Badge>
+                      </dd>
+                    </div>
+                  </dl>
+                </div>
+              )}
+
+              <DialogFooter className="gap-2 pt-2">
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => setPreviewDoc(null)}
+                >
+                  Fechar
+                </Button>
+                <Button className="flex-1" onClick={() => {}}>
+                  <Download size={16} className="mr-2" />
+                  Baixar
+                </Button>
+              </DialogFooter>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>

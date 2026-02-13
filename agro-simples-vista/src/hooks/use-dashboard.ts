@@ -52,8 +52,18 @@ export function useNotas(
 ) {
   return useQuery({
     queryKey: ["notas", produtorId, params],
-    queryFn: () => dashboardService.getNotas(produtorId, params),
-    enabled: !!produtorId,
+    queryFn: async () => {
+      try {
+        return await dashboardService.getNotas(produtorId, params);
+      } catch (error: any) {
+        if (error?.status === 404) {
+          return [];
+        }
+        throw error;
+      }
+    },
+    enabled: !!produtorId, // Habilitado - API implementada
+    retry: false,
   });
 }
 
@@ -151,8 +161,18 @@ export function useCompararCenarios() {
 export function useRascunhos(produtorId: string, params?: { status?: string }) {
   return useQuery({
     queryKey: ["rascunhos", produtorId, params],
-    queryFn: () => dashboardService.getRascunhos(produtorId, params),
-    enabled: !!produtorId,
+    queryFn: async () => {
+      try {
+        return await dashboardService.getRascunhos(produtorId, params);
+      } catch (error: any) {
+        if (error?.status === 404) {
+          return [];
+        }
+        throw error;
+      }
+    },
+    enabled: false, // Temporariamente desabilitado - API não implementada
+    retry: false,
   });
 }
 

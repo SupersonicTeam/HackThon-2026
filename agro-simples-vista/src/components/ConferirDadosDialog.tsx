@@ -24,8 +24,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { FileText, Image, Sparkles, Save, CheckCircle, Plus, AlertTriangle } from "lucide-react";
+import { FileText, Image, Sparkles, Save, CheckCircle, Plus, AlertTriangle, Download, Eye } from "lucide-react";
 import { tiposDocumento } from "@/mocks";
+import { useContador, DocumentoAnexado } from "@/hooks/use-contador";
 
 interface SolicitacaoBase {
   id: string | number;
@@ -169,6 +170,8 @@ const fmt = (v: string) => {
 };
 
 export default function ConferirDadosDialog({ solicitacao, open, onOpenChange, onSave, onApprove }: Props) {
+  const { listarDocumentos } = useContador();
+  
   // Generic fields
   const [tipo, setTipo] = useState("");
   const [data, setData] = useState("");
@@ -177,6 +180,10 @@ export default function ConferirDadosDialog({ solicitacao, open, onOpenChange, o
   const [municipio, setMunicipio] = useState("");
   const [ncm, setNcm] = useState("");
   const [observacao, setObservacao] = useState("");
+
+  // Documentos anexados
+  const [documentos, setDocumentos] = useState<DocumentoAnexado[]>([]);
+  const [loadingDocs, setLoadingDocs] = useState(false);
 
   // NF-e fields
   const [dadosGerais, setDadosGerais] = useState<DadosGeraisNFe>({ ...nfeMockDadosGerais });
@@ -193,36 +200,134 @@ export default function ConferirDadosDialog({ solicitacao, open, onOpenChange, o
     if (!solicitacao) return;
     setValidationError("");
 
-    if (isNFe) {
-      // Load NF-e mock data (simulating AI extraction)
-      setDadosGerais({ ...nfeMockDadosGerais });
-      setTributos({ ...nfeMockTributos });
-      setProdutos(nfeMockProdutos.map((p) => ({ ...p })));
-      setTransporte({ ...nfeMockTransporte });
-      setHasSuggestion(true);
-    } else {
-      const suggested = genericSuggested[String(solicitacao.id)];
-      if (suggested) {
-        setTipo(suggested.tipo);
-        setData(suggested.data);
-        setValor(suggested.valor);
-        setUf(suggested.uf);
-        setMunicipio(suggested.municipio);
-        setNcm(suggested.ncm);
-        setObservacao(suggested.observacao);
-        setHasSuggestion(true);
-      } else {
-        setTipo(solicitacao.categoria || "");
-        setData(solicitacao.prazo || "");
-        setValor("");
-        setUf("");
-        setMunicipio("");
-        setNcm("");
-        setObservacao(solicitacao.observacao || "");
-        setHasSuggestion(false);
-      }
+    // Carregar documentos anexados
+    if (open && solicitacao.id) {
+      setLoadingDocs(true);
+      listarDocumentos(String(solicitacao.id))
+        .then((docs) => {
+          setDocumentos(docs);
+          
+          // Se há documentos com dados extraídos, usa-os para preencher o formulário
+          const docComDados = docs.find((d: any) => d.dadosExtraidos);
+          if (docComDados && docComDados.dadosExtraidos) {
+            const dados = docComDados.dadosExtraidos as any;
+            
+            if (isNFe) {
+              // Se for NF-e e os dados extraídos contêm informações de nota fiscal
+              if (dados.chaveAcesso || dados.numero || dados.valorTotal) {
+                setDadosGerais({
+                  chaveAcesso: dados.chaveAcesso || "",
+                  numero: dados.numeroNota || dados.numero || "",
+                  serie: dados.serie || "",
+                  dataEmissao: dados.dataReferencia || dados.dataEmissao || "",
+                  uf: dados.destino || "",
+                  municipio: "",
+                  natureza: dados.naturezaOperacao || "",
+                  valorTotalNota: String(dados.valorTotal || dados.valor || 0),
+                  valorTotalProdutos: String(dados.valorProdutos || dados.valor || 0),
+                  frete: String(dados.valorFrete || 0),
+                  desconto: String(dados.valorDesconto || 0),
+                  outrasDespesas: String(dados.valorOutros || 0),
+                });
+                
+                setTributos({
+                  cfop: dados.cfop || "",
+                  cstIcms: "",
+                  baseIcms: String(dados.valorProdutos || 0),
+                  valorIcms: String(dados.valorIcms || 0),
+                  baseSt: "0.00",
+                  valorSt: "0.00",
+                  pisAliquota: "",
+                  pisValor: String(dados.valorCbs || 0),
+                  cofinsAliquota: "",
+                  cofinsValor: String(dados.valorIbs || 0),
+                  ipiAliquota: "",
+                  ipiValor: String(dados.valorIpi || 0),
+                  totalTributos: String((dados.valorCbs || 0) + (dados.valorIbs || 0) + (dados.valorIcms || 0) + (dados.valorIpi || 0) + (dados.valorFunrural || 0)),
+                });
+                
+                if (dados.itens && Array.isArray(dados.itens)) {
+                  setProdutos(dados.itens.map((item: any) => ({
+                    codigo: item.codigoProduto || "",
+                    descricao: item.descricao || "",
+                    ncm: item.ncm || "",
+                    cfop: item.cfop || "",
+                    cst: "",
+                    un: item.unidade || "",
+                    quantidade: String(item.quantidade || 0),
+                    valorUnitario: String(item.valorUnitario || 0),
+                    valorTotal: String(item.valorTotal || 0),
+                  })));
+                } else {
+                  setProdutos([...nfeMockProdutos]);
+                }
+                
+                setTransporte({ ...nfeMockTransporte });
+                setHasSuggestion(true);
+              } else {
+                // Fallback para mock se não tiver dados completos
+                setDadosGerais({ ...nfeMockDadosGerais });
+                setTributos({ ...nfeMockTributos });
+                setProdutos([...nfeMockProdutos]);
+                setTransporte({ ...nfeMockTransporte });
+                setHasSuggestion(true);
+              }
+            } else {
+              // Documento genérico
+              setTipo(solicitacao.categoria || "");
+              setData(dados.dataReferencia || solicitacao.prazo || "");
+              setValor(String(dados.valor || ""));
+              setUf("");
+              setMunicipio("");
+              setNcm("");
+              setObservacao(dados.observacao || solicitacao.observacao || "");
+              setHasSuggestion(true);
+            }
+          } else {
+            // Não há dados extraídos, usa mock/sugestões
+            if (isNFe) {
+              setDadosGerais({ ...nfeMockDadosGerais });
+              setTributos({ ...nfeMockTributos });
+              setProdutos([...nfeMockProdutos]);
+              setTransporte({ ...nfeMockTransporte });
+              setHasSuggestion(true);
+            } else {
+              const suggested = genericSuggested[String(solicitacao.id)];
+              if (suggested) {
+                setTipo(suggested.tipo);
+                setData(suggested.data);
+                setValor(suggested.valor);
+                setUf(suggested.uf);
+                setMunicipio(suggested.municipio);
+                setNcm(suggested.ncm);
+                setObservacao(suggested.observacao);
+                setHasSuggestion(true);
+              } else {
+                setTipo(solicitacao.categoria || "");
+                setData(solicitacao.prazo || "");
+                setValor("");
+                setUf("");
+                setMunicipio("");
+                setNcm("");
+                setObservacao(solicitacao.observacao || "");
+                setHasSuggestion(false);
+              }
+            }
+          }
+        })
+        .catch(() => {
+          setDocumentos([]);
+          // Fallback para dados padrão
+          if (isNFe) {
+            setDadosGerais({ ...nfeMockDadosGerais });
+            setTributos({ ...nfeMockTributos });
+            setProdutos([...nfeMockProdutos]);
+            setTransporte({ ...nfeMockTransporte });
+          }
+        })
+        .finally(() => setLoadingDocs(false));
     }
-  }, [solicitacao, isNFe]);
+  }, [solicitacao, isNFe, open, listarDocumentos]);
 
   // Validation for NF-e (must be before early return)
   const missingNFeFields = useMemo(() => {
@@ -272,21 +377,59 @@ export default function ConferirDadosDialog({ solicitacao, open, onOpenChange, o
 
   const fieldError = (field: string) => missingNFeFields.includes(field) && validationError;
 
-  // ── Preview section (shared) ──
+  // ── Preview section with attached documents ──
   const previewSection = (
-    <div className="flex flex-col items-center justify-center rounded-lg border bg-muted/40 p-4 min-h-[180px] sm:min-h-[400px]">
-      {isPdf ? (
-        <div className="flex flex-col items-center gap-2 text-muted-foreground">
-          <FileText size={48} />
-          <p className="text-sm font-medium">{solicitacao.arquivoNome}</p>
-          <p className="text-xs">Preview de PDF indisponível no MVP</p>
+    <div className="space-y-3">
+      {/* Documentos anexados pelo produtor */}
+      {documentos.length > 0 && (
+        <div className="space-y-2">
+          <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+            Documentos Anexados ({documentos.length})
+          </h3>
+          <div className="space-y-2">
+            {documentos.map((doc) => {
+              const isPdf = doc.nomeArquivo.toLowerCase().endsWith('.pdf');
+              const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(doc.nomeArquivo);
+              
+              return (
+                <div key={doc.id} className="flex items-center gap-3 rounded-lg border bg-muted/40 p-3">
+                  {isPdf ? (
+                    <FileText size={24} className="text-red-500 shrink-0" />
+                  ) : isImage ? (
+                    <Image size={24} className="text-primary shrink-0" />
+                  ) : (
+                    <FileText size={24} className="text-muted-foreground shrink-0" />
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{doc.nomeArquivo}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {(doc.tamanho / 1024).toFixed(0)} KB · {new Date(doc.dataUpload).toLocaleDateString('pt-BR')}
+                    </p>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="shrink-0"
+                    onClick={() => {
+                      const url = `${import.meta.env.VITE_API_URL || 'http://localhost:3001/api'}/contador/documentos/${doc.id}/download`;
+                      window.open(url, '_blank');
+                    }}
+                  >
+                    <Download size={16} />
+                  </Button>
+                </div>
+              );
+            })}
+          </div>
         </div>
-      ) : (
-        <div className="flex flex-col items-center gap-2 text-muted-foreground">
-          <Image size={48} />
-          <p className="text-sm font-medium">{solicitacao.arquivoNome || "Anexo"}</p>
-          <img src="/placeholder.svg" alt="Preview" className="w-full max-w-[240px] rounded border mt-2" />
-        </div>
+      )}
+      
+      {loadingDocs && (
+        <p className="text-xs text-muted-foreground text-center py-2">Carregando documentos...</p>
+      )}
+      
+      {!loadingDocs && documentos.length === 0 && (
+        <p className="text-xs text-muted-foreground text-center py-2">Nenhum documento anexado ainda.</p>
       )}
     </div>
   );

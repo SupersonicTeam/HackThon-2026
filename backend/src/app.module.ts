@@ -6,6 +6,7 @@ import { CalendarioFiscalModule } from './modules/calendario-fiscal/calendario-f
 import { PrismaModule } from './prisma/prisma.module';
 import { WhatsappModule } from './modules/whatsapp/whatsapp.module';
 import { ContadorModule } from './modules/contador/contador.module';
+import { NotificacaoModule } from './modules/notificacao/notificacao.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { ContadorModule } from './modules/contador/contador.module';
     CalendarioFiscalModule,
     WhatsappModule,
     ContadorModule,
+    NotificacaoModule,
   ],
 })
 export class AppModule {}

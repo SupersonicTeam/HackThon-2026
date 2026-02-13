@@ -10,6 +10,7 @@ import type {
   RascunhoNota,
   CreateRascunhoDto,
   FeedbackRascunhoDto,
+  GerarNotaDiretaDto,
   OcrResult,
 } from "./types";
 
@@ -73,23 +74,7 @@ export async function uploadNota(
   );
 }
 
-export async function gerarNotaDireta(data: {
-  produtorId: string;
-  tipo: "entrada" | "saida";
-  naturezaOperacao: string;
-  cfop?: string;
-  destinatarioNome?: string;
-  destinatarioCpfCnpj?: string;
-  uf?: string;
-  municipio?: string;
-  itens: Array<{
-    descricao: string;
-    ncm?: string;
-    unidade: string;
-    quantidade: number;
-    valorUnitario: number;
-  }>;
-}): Promise<NotaFiscal> {
+export async function gerarNotaDireta(data: GerarNotaDiretaDto): Promise<NotaFiscal> {
   return api.post<NotaFiscal>("/dashboard/notas/gerar-direta", data);
 }
 
