@@ -53,6 +53,9 @@ export class GeracaoNotaFiscalService {
     // Gera chave temporária única
     const chaveTemporaria = `TEMP-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
+    // Converte a data de emissão para objeto Date
+    const dataEmissao = new Date(data.dataEmissao);
+
     // Cria o rascunho no banco de dados
     const rascunho = await this.prisma.rascunhoNota.create({
       data: {
@@ -64,7 +67,7 @@ export class GeracaoNotaFiscalService {
         nomeDestinatario: data.nomeDestinatario,
         cpfCnpjDestinatario: data.cpfCnpjDestinatario,
         ufDestino: data.ufDestino,
-        dataEmissao: data.dataEmissao,
+        dataEmissao: dataEmissao,
         observacoes: data.observacoes,
         valorTotal,
         chaveTemporaria,
