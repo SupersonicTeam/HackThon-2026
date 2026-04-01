@@ -49,6 +49,7 @@ import ResumoPagamento from "@/components/ResumoPagamento";
 import ConferirDadosDialog from "@/components/ConferirDadosDialog";
 import RascunhosContadorTab from "@/components/RascunhosContadorTab";
 import { useNotificacoes } from "@/contexts/NotificacoesContext";
+import { API_BASE_URL } from "@/lib/api";
 
 function formatDate(iso: string) {
   return new Date(iso + "T12:00:00").toLocaleDateString("pt-BR");
@@ -638,7 +639,7 @@ export default function Contador() {
                         <h4 className="text-sm font-semibold">Documentos Anexados:</h4>
                         {viewDocumentos.map((doc: any) => {
                           const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(doc.nomeArquivo);
-                          const imageUrl = `${import.meta.env.VITE_API_URL || 'http://localhost:3001/api'}/contador/documentos/${doc.id}/download`;
+                          const imageUrl = `${API_BASE_URL}/contador/documentos/${doc.id}/download`;
                           
                           return (
                             <div key={doc.id} className="space-y-2">

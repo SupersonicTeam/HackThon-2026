@@ -5,18 +5,19 @@ import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  const corsOrigins = (process.env.CORS_ORIGINS ?? '')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
 
   // Set global prefix
   app.setGlobalPrefix('api');
 
   // Enable CORS - allow all origins in development
   app.enableCors({
-    origin: [
-      'http://localhost:5173',
-      'http://localhost:8080',
-      'http://10.35.41.217:8080',
-      /^http:\/\/\d+\.\d+\.\d+\.\d+:\d+$/, // Accept any IP:port
-    ],
+    origin: corsOrigins.length
+      ? [...corsOrigins, /^http:\/\/\d+\.\d+\.\d+\.\d+:\d+$/]
+      : true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     credentials: true,
     allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
@@ -46,10 +47,11 @@ async function bootstrap() {
   SwaggerModule.setup('api/docs', app, document);
 
   const port = process.env.PORT || 3001;
+  const appHost = process.env.APP_HOST || 'localhost';
   await app.listen(port, '0.0.0.0'); // Listen on all network interfaces
 
-  console.log(`🚀 AgroTributos API running on http://localhost:${port}`);
-  console.log(`📚 Swagger docs: http://localhost:${port}/api/docs`);
+  console.log(`🚀 AgroTributos API running on http://${appHost}:${port}`);
+  console.log(`📚 Swagger docs: http://${appHost}:${port}/api/docs`);
   console.log(`🌐 Network access: http://<your-ip>:${port}`);
 }
 

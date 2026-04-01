@@ -27,6 +27,7 @@ import {
 import { FileText, Image, Sparkles, Save, CheckCircle, Plus, AlertTriangle, Download, Eye } from "lucide-react";
 import { tiposDocumento } from "@/mocks";
 import { useContador, DocumentoAnexado } from "@/hooks/use-contador";
+import { API_BASE_URL } from "@/lib/api";
 
 interface SolicitacaoBase {
   id: string | number;
@@ -411,7 +412,7 @@ export default function ConferirDadosDialog({ solicitacao, open, onOpenChange, o
                     variant="ghost"
                     className="shrink-0"
                     onClick={() => {
-                      const url = `${import.meta.env.VITE_API_URL || 'http://localhost:3001/api'}/contador/documentos/${doc.id}/download`;
+                      const url = `${API_BASE_URL}/contador/documentos/${doc.id}/download`;
                       window.open(url, '_blank');
                     }}
                   >

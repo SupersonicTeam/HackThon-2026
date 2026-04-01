@@ -13,7 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+import dotenv from 'dotenv';
+import path from 'path';
 import config from './config';
 import { initServer } from './index';
+
+dotenv.config({ path: path.resolve(process.cwd(), '../.env') });
+dotenv.config({ path: path.resolve(process.cwd(), '.env'), override: true });
 
 initServer(config);

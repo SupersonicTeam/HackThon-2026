@@ -25,7 +25,9 @@ export interface SessionStatus {
 @Injectable()
 export class WhatsappService {
   private readonly logger = new Logger(WhatsappService.name);
-  private baseUrl = process.env.WPP_BASE_URL ?? 'http://localhost:21465';
+  private baseUrl =
+    process.env.WPP_BASE_URL ??
+    `${process.env.WPP_SERVER_HOST ?? 'http://localhost'}:${process.env.WPP_SERVER_PORT ?? '21465'}`;
   private session = process.env.WPP_SESSION ?? 'NERDWHATS_AMERICA';
   private secretKey = process.env.WPP_SECRET_KEY ?? 'THISISMYSECURETOKEN';
   private token = process.env.WPP_TOKEN ?? '';

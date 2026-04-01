@@ -81,5 +81,15 @@
 - [X] Link rápido para gerar nota
 - [X] Link para enviar nota existente
 
+---
+
+## Configuração Global de Ambiente
+
+- Arquivo central: `.env` na raiz do projeto (`Project/.env`)
+- Modelo pronto: `Project/.env.example`
+- Backend (`backend`) lê `../.env` com fallback para `backend/.env`
+- Frontend (`agro-simples-vista`) lê variáveis da raiz via `envDir: ".."`
+- WPP (`wppconnect-server`) lê `../.env` e permite sobrescrever com `wppconnect-server/.env`
+
 
 

@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { api } from "@/lib/api"; // <-- aponta pro teu ApiClient
+import { api, API_BASE_URL } from "@/lib/api"; // <-- aponta pro teu ApiClient
 
 export type Pendencia = {
   id: string;
@@ -180,7 +180,7 @@ export function useContador() {
         formData.append('nomeArquivo', payload.nomeArquivo);
         if (payload.tamanho) formData.append('tamanho', String(payload.tamanho));
 
-        const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001/api'}/contador/documentos/anexar`, {
+        const response = await fetch(`${API_BASE_URL}/contador/documentos/anexar`, {
           method: 'POST',
           body: formData,
         });
